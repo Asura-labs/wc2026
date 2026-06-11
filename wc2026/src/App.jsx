@@ -141,18 +141,69 @@ const calcDayPts=(date,up,res)=>(BY_DATE[date]||[]).reduce((s,m)=>{const r=res[m
 const calcTotal=(up,res)=>ALL_DATES.reduce((s,d)=>s+calcDayPts(d,up,res),0);
 function playerStats(up,res){let correct=0,wrong=0,total=0;ALL_DATES.forEach(d=>{(BY_DATE[d]||[]).forEach(m=>{const p=up?.[d]?.[m.id],r=res[m.id];if(p){total++;if(r){if(p===r)correct++;else wrong++;}}});});const dec=correct+wrong;return{correct,wrong,total,pct:dec?Math.round(correct/dec*100):0};}
 
-async function fetchFromAPI(apiKey){
-  const h={Authorization:`Bearer ${apiKey}`};
-  const [allRes,finRes]=await Promise.all([fetch("https://api.wc2026api.com/matches",{headers:h}),fetch("https://api.wc2026api.com/matches?status=finished",{headers:h})]);
-  if(!allRes.ok)throw new Error(`API error ${allRes.status}`);
-  const allData=await allRes.json();const finData=finRes.ok?await finRes.json():[];
-  const allM=allData.matches||allData||[];const finM=finData.matches||finData||[];
+// ── Δωρεαν API (openfootball) — ΧΩΡΙΣ κλειδι ──
+// Τραβαει το worldcup.json απο το GitHub (CORS-friendly, χωρις auth).
+// Δομη: { matches:[ { date, team1, team2, score:{ft:[h,a]}, group, round } ] }
+function normTeam(s){
+  return (s||"").toLowerCase()
+    .replace(/[^a-zα-ω ]/gi,"")          // κρατα μονο γραμματα/κενα
+    .replace(/\b(ir|rep|republic of)\b/g,"")
+    .trim();
+}
+function teamsMatch(a,b){
+  const x=normTeam(a),y=normTeam(b);
+  if(!x||!y)return false;
+  return x===y || x.includes(y) || y.includes(x);
+}
+async function fetchFromAPI(){
+  // πολλαπλα mirrors για σιγουρια
+  const urls=[
+    "https://raw.githubusercontent.com/openfootball/worldcup.json/master/2026/worldcup.json",
+    "https://cdn.jsdelivr.net/gh/openfootball/worldcup.json@master/2026/worldcup.json",
+  ];
+  let data=null,lastErr=null;
+  for(const u of urls){
+    try{
+      const res=await fetch(u,{cache:"no-store"});
+      if(!res.ok){lastErr=`HTTP ${res.status}`;continue;}
+      data=await res.json();
+      if(data)break;
+    }catch(e){lastErr=e.message;}
+  }
+  if(!data)throw new Error(lastErr||"Δεν φορτωσαν τα δεδομενα");
+
+  const matches=data.matches||[];
   const newTeams={},newResults={};
-  function find(m){const d=(m.kickoff_utc||m.date||"").slice(0,10);const h2=(m.home_team||m.home||"").toLowerCase();const a=(m.away_team||m.away||"").toLowerCase();
-    return SCHEDULE.find(s=>s.date===d&&(s.home.toLowerCase().includes(h2)||h2.includes(s.home.toLowerCase()))&&(s.away.toLowerCase().includes(a)||a.includes(s.away.toLowerCase())))||
-      SCHEDULE.find(s=>(s.home.toLowerCase().includes(h2)||h2.includes(s.home.toLowerCase()))&&(s.away.toLowerCase().includes(a)||a.includes(s.away.toLowerCase())));}
-  allM.forEach(m=>{const h2=m.home_team||m.home,a=m.away_team||m.away;if(!h2||!a||h2==="TBD"||a==="TBD")return;const f=find(m);if(f&&f.phase!=="group")newTeams[f.id]={home:h2,away:a};});
-  finM.forEach(m=>{const hg=m.home_score??m.home_goals??m.score?.home;const ag=m.away_score??m.away_goals??m.score?.away;if(hg==null||ag==null)return;const f=find(m);if(f)newResults[f.id]=hg>ag?"1":hg<ag?"2":"X";});
+
+  function findSched(m){
+    const d=(m.date||"").slice(0,10);
+    const t1=m.team1?.name||m.team1, t2=m.team2?.name||m.team2;
+    // ταιριασμα με ημερομηνια + ομαδες, αλλιως μονο ομαδες
+    return SCHEDULE.find(s=>s.date===d && teamsMatch(s.home,t1) && teamsMatch(s.away,t2))
+        || SCHEDULE.find(s=>teamsMatch(s.home,t1) && teamsMatch(s.away,t2));
+  }
+  function getScore(m){
+    // openfootball: score.ft = [home, away]  ή  score1/score2
+    if(m.score?.ft && m.score.ft.length===2) return [m.score.ft[0],m.score.ft[1]];
+    if(m.score1!=null && m.score2!=null)     return [m.score1,m.score2];
+    return null;
+  }
+
+  matches.forEach(m=>{
+    const f=findSched(m);
+    if(!f)return;
+    const t1=m.team1?.name||m.team1, t2=m.team2?.name||m.team2;
+    // knockout teams (οχι TBD)
+    if(f.phase!=="group" && t1 && t2 && !/winner|loser|tbd|\?/i.test(t1+t2)){
+      newTeams[f.id]={home:t1,away:t2};
+    }
+    // αποτελεσμα
+    const sc=getScore(m);
+    if(sc){
+      const [hg,ag]=sc;
+      if(hg!=null && ag!=null) newResults[f.id]=hg>ag?"1":hg<ag?"2":"X";
+    }
+  });
   return{newTeams,newResults};
 }
 
@@ -339,26 +390,22 @@ export default function App(){
     await loadAll();
     showToast("Διαγραφηκε","err");
   }
-  async function saveApiKey(k){
-    setApiKey(k);
-    await supabase.from("game_data").upsert({key:"meta",value:{apiKey:k,lastFetch},updated_at:new Date().toISOString()});
-    showToast("Key αποθηκευτηκε");
-  }
   async function doFetch(){
-    const k=(apiInput.trim()||apiKey).trim();if(!k){showToast("Βαλε API key","err");return;}
     setFetching(true);
     try{
-      const{newTeams,newResults}=await fetchFromAPI(k);
+      const{newTeams,newResults}=await fetchFromAPI();
       const mergedRes={...results,...newResults};
       const mergedTeams={...apiTeams,...newTeams};
       const now=new Date().toISOString();
-      setResults(mergedRes); setApiTeams(mergedTeams); setApiKey(k); setLastFetch(now);
+      setResults(mergedRes); setApiTeams(mergedTeams); setLastFetch(now);
       await Promise.all([
         supabase.from("game_data").upsert({key:"results",value:mergedRes,updated_at:now}),
         supabase.from("game_data").upsert({key:"apiTeams",value:mergedTeams,updated_at:now}),
-        supabase.from("game_data").upsert({key:"meta",value:{apiKey:k,lastFetch:now},updated_at:now}),
+        supabase.from("game_data").upsert({key:"meta",value:{lastFetch:now},updated_at:now}),
       ]);
-      showToast(`${Object.keys(newResults).length} αποτελεσματα · ${Object.keys(newTeams).length} ομαδες`);
+      const rc=Object.keys(newResults).length, tc=Object.keys(newTeams).length;
+      if(rc===0 && tc===0) showToast("Δεν βρεθηκαν νεα αποτελεσματα ακομα");
+      else showToast(`${rc} αποτελεσματα · ${tc} ομαδες`);
     }catch(e){ showToast(`Σφαλμα: ${e.message}`,"err"); }
     setFetching(false);
   }
@@ -470,15 +517,13 @@ export default function App(){
         </div>
       </>)}
       {adminTab==="auto"&&(<div className="fetch-card">
-        <div className="fetch-title">Αυτοματη Ανακτηση API</div>
-        <div className="fetch-desc">Τραβαει αποτελεσματα + ομαδες knockout απο <a href="https://www.wc2026api.com" target="_blank" rel="noreferrer" style={{color:"var(--gold3)"}}>wc2026api.com</a>.<br/>Δωρεαν key: επισκεψου το site → "Get API Key".</div>
+        <div className="fetch-title">Αυτοματη Ανακτηση Αποτελεσματων</div>
+        <div className="fetch-desc">Τραβαει αυτοματα τα αποτελεσματα + ομαδες knockout απο δωρεαν δημοσια βαση (openfootball). Δεν χρειαζεται κλειδι.<br/><br/>Πατα <b>Ανακτηση</b> μετα το τελος των ματς — οι ποντοι μοιραζονται αυτοματα σε οσους ψηφισαν σωστα, για ολους.</div>
         <div className="fetch-row">
-          <input className="inp-key" type="text" placeholder={apiKey?"Key αποθηκευμενο ✓":"wc2026_your_key_here"} value={apiInput} onChange={e=>setApiInput(e.target.value)}/>
-          <button className="bsm b-dark" onClick={()=>{const k=apiInput.trim();if(k)saveApiKey(k);}}>Αποθηκευση</button>
-          <button className="bsm b-gold" onClick={doFetch} disabled={fetching}>{fetching?"Φορτωση...":"Ανακτηση"}</button>
+          <button className="bsm b-gold" onClick={doFetch} disabled={fetching} style={{flex:1,minWidth:140}}>{fetching?"Φορτωση...":"🔄 Ανακτηση τωρα"}</button>
         </div>
-        {lastFetch&&<div className="last-f">Τελευταια: {new Date(lastFetch).toLocaleString("el-GR")}</div>}
-        {apiKey&&!apiInput&&<div className="last-f">✓ Key: {apiKey.slice(0,16)}…</div>}
+        {lastFetch&&<div className="last-f">Τελευταια ανακτηση: {new Date(lastFetch).toLocaleString("el-GR")}</div>}
+        <div className="last-f" style={{marginTop:".4rem",opacity:.8}}>Σημ: τα δεδομενα ενημερωνονται ~1 φορα/ημερα στην πηγη. Αν δεν εμφανιστει αποτελεσμα αμεσως μετα το ματς, ξαναδοκιμασε αργοτερα ή βαλε το χειροκινητα στην καρτελα «Αποτελεσματα».</div>
       </div>)}
       {adminTab==="preview"&&(<>
         <div className="dstrip">{ALL_DATES.map(d=><button key={d} className={`dtab${d===prevDate?" on":""}`} onClick={()=>setAdminPrev(d)}>{fmtShort(d)}</button>)}</div>
