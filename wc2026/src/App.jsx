@@ -4,7 +4,7 @@ import { createClient } from "@supabase/supabase-js";
 // ════════════════════════════════════════════════════════════════════
 //  ⚙️  ΡΥΘΜΙΣΕΙΣ — ΒΑΛΕ ΕΔΩ ΤΑ ΚΛΕΙΔΙΑ ΑΠΟ ΤΟ SUPABASE
 // ════════════════════════════════════════════════════════════════════
-const SUPABASE_URL = "https://zxjaexgaiddidampbtnp.supabase.co/rest/v1/";
+const SUPABASE_URL = "https://zxjaexgaiddidampbtnp.supabase.co";
 const SUPABASE_KEY = "sb_publishable_kjCJGLbm6X2naEiZJjiZnw_T1FDDeot";
 // ════════════════════════════════════════════════════════════════════
 
