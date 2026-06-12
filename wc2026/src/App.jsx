@@ -343,7 +343,8 @@ export default function App(){
   const [bracketPhase,setBracketPhase]=useState("round32");
   const [adminTimeDate,setAdminTimeDate]=useState(ALL_DATES[0]||"");
   const [timeDraft,setTimeDraft]=useState({}); // local edits before save
-  const [pwEdit,setPwEdit]=useState({}); // userId -> new password draft
+  const [pwEdit,setPwEdit]=useState({}); // (unused, kept for compat)
+  const [clearDaySel,setClearDaySel]=useState({}); // userId -> selected day for clearing votes
   const [confetti,setConfetti]=useState(false);
   const [sharing,setSharing]=useState(false);
   const prevWinsRef=useRef(null); // track wins to trigger confetti
@@ -366,17 +367,24 @@ export default function App(){
 
   // ── LOCK LOGIC: a match locks 15min before its kickoff (Greek time) ──
   // matchTimes[id] = "HH:MM" for the match's date. Returns true if voting is closed.
+  // NOTE: if the kickoff time is early morning (before 08:00), it's treated as the
+  // early hours of the NEXT calendar day — e.g. a "today" match at 04:00 actually
+  // kicks off after midnight, so it must NOT lock during today's daytime.
   function isLocked(matchId, matchDate){
     const hhmm=matchTimes[matchId];
     if(!hhmm) return false; // no time set → stays open
     const [h,m]=hhmm.split(":").map(Number);
     if(isNaN(h)||isNaN(m)) return false;
-    // build a Date in Greek time. The kickoff is matchDate at HH:MM Europe/Athens.
-    // We compare "now in Athens" vs "kickoff - 15min in Athens" using string compare on Athens wall clock.
+    // determine the real kickoff calendar date: early-morning times roll to next day
+    let kdate=matchDate;
+    if(h<8){ // 00:00–07:59 → next day
+      const d=new Date(matchDate+"T12:00:00");
+      d.setDate(d.getDate()+1);
+      kdate=d.toISOString().slice(0,10);
+    }
     const nowAthens=new Date(new Date(nowTick).toLocaleString("en-US",{timeZone:"Europe/Athens"}));
-    const kickoff=new Date(`${matchDate}T${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}:00`);
+    const kickoff=new Date(`${kdate}T${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}:00`);
     const lockAt=new Date(kickoff.getTime()-15*60*1000);
-    // compare wall-clock: nowAthens (as local-naive) vs lockAt (local-naive of matchDate)
     return nowAthens.getTime() >= lockAt.getTime();
   }
 
@@ -493,11 +501,17 @@ export default function App(){
     await loadAll();
     showToast("Διαγραφηκε","err");
   }
-  async function changePassword(uid,newPass){
-    if(!newPass||newPass.length<4){ showToast("Κωδικος ≥ 4 χαρακτηρες","err"); return; }
-    await supabase.from("users").update({password:newPass}).eq("id",uid);
+  // ── ADMIN: clear a player's votes for a specific day (so they can re-vote) ──
+  async function clearVotes(uid, date){
+    // optimistic local update
+    setPredictions(prev=>{
+      const n={...prev};
+      if(n[uid]){ n[uid]={...n[uid]}; delete n[uid][date]; }
+      return n;
+    });
+    await supabase.from("predictions").delete().eq("user_id",uid).eq("match_date",date);
     await loadAll();
-    showToast("Κωδικος αλλαξε");
+    showToast("Οι ψηφοι καθαριστηκαν");
   }
 
   // ── SHARE LEADERBOARD as image ──
@@ -807,15 +821,17 @@ export default function App(){
       </>)}
       {adminTab==="times"&&(()=>{
         const tMs=(BY_DATE[adminTimeDate]||[]).map(resolve);
+        const nextDayLabel=(()=>{const d=new Date(adminTimeDate+"T12:00:00");d.setDate(d.getDate()+1);return d.toLocaleDateString("el-GR",{day:"numeric",month:"short"});})();
         return(<>
-          <div className="info-bar">Βαλε την <b>ωρα εναρξης</b> καθε ματς σε <b>ωρα Ελλαδας</b> (πχ 22:00). Η ψηφοφορια κλειδωνει αυτοματα <b>15' πριν</b>. Ασε κενο = μενει ανοιχτο.</div>
+          <div className="info-bar">Βαλε την <b>ωρα εναρξης</b> καθε ματς σε <b>ωρα Ελλαδας</b> (πχ 22:00). Η ψηφοφορια κλειδωνει αυτοματα <b>15' πριν</b>. Ασε κενο = μενει ανοιχτο.<br/><br/>⏰ <b>Ματς μετα τα μεσανυχτα:</b> αν βαλεις ωρα πριν τις 08:00 (πχ 04:00), το συστημα το θεωρει αυτοματα ξημερωματα της <b>επομενης μερας</b> ({nextDayLabel}) — δεν κλειδωνει νωριτερα.</div>
           <div className="dstrip">{ALL_DATES.map(d=><button key={d} className={`dtab${d===adminTimeDate?" on":""}`} onClick={()=>setAdminTimeDate(d)}>{fmtShort(d)}</button>)}</div>
           <div className="asec"><div className="asec-h">{fmtLong(adminTimeDate)}</div>
             {tMs.length===0&&<div style={{color:"var(--muted)",fontSize:".8rem"}}>Δεν υπαρχουν ματς.</div>}
             {tMs.map(m=>{
               const cur = (m.id in timeDraft) ? timeDraft[m.id] : (matchTimes[m.id]||"");
+              const isNextDay = cur && Number(cur.split(":")[0])<8;
               return(<div key={m.id} className="am">
-                <div className="am-l"><div className="am-team">{F(m.home)} {m.home} vs {m.away} {F(m.away)}</div><div className="am-sub">{m.label||`Ομ. ${m.group}`}</div></div>
+                <div className="am-l"><div className="am-team">{F(m.home)} {m.home} vs {m.away} {F(m.away)}</div><div className="am-sub">{m.label||`Ομ. ${m.group}`}{isNextDay&&<span style={{color:"var(--gold3)"}}> · ξημερωματα {nextDayLabel}</span>}</div></div>
                 <input className="time-inp" type="time" value={cur} onChange={e=>setTimeDraft(d=>({...d,[m.id]:e.target.value}))}/>
               </div>);
             })}
@@ -845,17 +861,23 @@ export default function App(){
         </div>
       </>)}
       {adminTab==="users"&&(<div className="asec"><div className="asec-h">Μελη ({users.length})</div>
-        <div className="info-bar" style={{marginBottom:".8rem"}}>Αλλαξε κωδικο: γραψε νεο κωδικο διπλα στον παικτη και πατα ✓. Χρησιμο αν καποιος ξεχασει τον κωδικο του.</div>
+        <div className="info-bar" style={{marginBottom:".8rem"}}>🗑️ <b>Καθαρισμος ψηφων:</b> διαλεξε μερα και πατα «Καθαρισμα» για να σβησεις τις ψηφους ενος παικτη εκεινη τη μερα — ωστε να ξαναψηφισει. <b>Μονο ο admin</b> το βλεπει αυτο.</div>
         {users.map(u=>{const total=calcTotal(predictions[u.id]||{},results);const vs=ALL_DATES.reduce((s,d)=>s+Object.keys((predictions[u.id]||{})[d]||{}).length,0);
+          const userDays=ALL_DATES.filter(d=>Object.keys((predictions[u.id]||{})[d]||{}).length>0);
+          const selDay=clearDaySel[u.id]||userDays[userDays.length-1]||"";
           return(<div key={u.id} className="ur" style={{flexWrap:"wrap"}}>
             <span style={{flex:1,minWidth:100,fontFamily:"'Rajdhani',sans-serif",fontWeight:700,fontSize:".95rem"}}>{u.username}{u.is_admin?" 👑":""}</span>
             <span style={{color:"var(--muted)",fontSize:".75rem"}}>{vs} ψηφ.</span>
             <span style={{color:"var(--gold2)",fontWeight:700,fontFamily:"'Orbitron',sans-serif",fontSize:".85rem"}}>{total}</span>
             {!u.is_admin&&<button className="del" onClick={()=>delUser(u.id)}>✕</button>}
-            <div style={{display:"flex",gap:".3rem",width:"100%",marginTop:".4rem"}}>
-              <input className="inp-key" type="text" placeholder="νεος κωδικος" value={pwEdit[u.id]||""} onChange={e=>setPwEdit(p=>({...p,[u.id]:e.target.value}))} style={{flex:1}}/>
-              <button className="bsm b-dark" onClick={()=>{changePassword(u.id,pwEdit[u.id]);setPwEdit(p=>({...p,[u.id]:""}));}}>✓ Αλλαγη</button>
-            </div>
+            {userDays.length>0&&(
+              <div style={{display:"flex",gap:".3rem",width:"100%",marginTop:".4rem",alignItems:"center"}}>
+                <select className="day-select" value={selDay} onChange={e=>setClearDaySel(p=>({...p,[u.id]:e.target.value}))}>
+                  {userDays.map(d=><option key={d} value={d}>{fmtLong(d)} ({Object.keys((predictions[u.id]||{})[d]||{}).length} ψηφ.)</option>)}
+                </select>
+                <button className="bsm b-dark" onClick={()=>clearVotes(u.id,selDay)} style={{whiteSpace:"nowrap"}}>🗑️ Καθαρισμα</button>
+              </div>
+            )}
           </div>);
         })}
       </div>)}
@@ -1133,6 +1155,8 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Inter'
 .reveal-chip.rv2{background:rgba(255,100,100,0.1);color:var(--red);border-color:rgba(255,100,100,0.2);}
 .time-inp{background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.14);border-radius:8px;color:var(--text);font-family:'Orbitron',sans-serif;font-size:.85rem;font-weight:600;padding:.35rem .5rem;outline:none;transition:all .15s;color-scheme:dark;}
 .time-inp:focus{border-color:var(--gold3);box-shadow:0 0 0 3px rgba(244,203,85,0.1);}
+.day-select{flex:1;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.14);border-radius:8px;color:var(--text);font-family:'Rajdhani',sans-serif;font-size:.82rem;font-weight:600;padding:.4rem .5rem;outline:none;transition:all .15s;color-scheme:dark;cursor:pointer;}
+.day-select:focus{border-color:var(--gold3);}
 .streak-card{display:flex;align-items:center;gap:.9rem;background:linear-gradient(135deg,rgba(255,140,40,0.12),rgba(244,203,85,0.08));border:1px solid rgba(255,140,40,0.25);border-radius:var(--r2);padding:1rem 1.2rem;margin-bottom:1rem;box-shadow:0 8px 24px rgba(0,0,0,0.4);}
 .streak-flame{font-size:2.2rem;filter:drop-shadow(0 0 10px rgba(255,140,40,0.4));animation:flicker 2s ease-in-out infinite;}
 @keyframes flicker{0%,100%{transform:scale(1) rotate(-2deg);}50%{transform:scale(1.08) rotate(2deg);}}
