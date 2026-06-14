@@ -16,7 +16,7 @@ const FLAGS = {
   "Bosnia-Herzegovina":"🇧🇦",Brazil:"🇧🇷",Morocco:"🇲🇦",Scotland:"🏴󠁧󠁢󠁳󠁣󠁴󠁿",Haiti:"🇭🇹",
   Australia:"🇦🇺","Czech Republic":"🇨🇿",Germany:"🇩🇪",Curacao:"🇨🇼",
   Netherlands:"🇳🇱",Japan:"🇯🇵","Ivory Coast":"🇨🇮",Ecuador:"🇪🇨",Tunisia:"🇹🇳",
-  Ukraine:"🇺🇦",Spain:"🇪🇸","Cape Verde":"🇨🇻",Belgium:"🇧🇪",Egypt:"🇪🇬",
+  Ukraine:"🇺🇦",Sweden:"🇸🇪",Spain:"🇪🇸","Cape Verde":"🇨🇻",Belgium:"🇧🇪",Egypt:"🇪🇬",
   "Saudi Arabia":"🇸🇦",Uruguay:"🇺🇾",Iran:"🇮🇷","New Zealand":"🇳🇿",France:"🇫🇷",
   Senegal:"🇸🇳",Norway:"🇳🇴",Iraq:"🇮🇶",Argentina:"🇦🇷",Algeria:"🇩🇿",Austria:"🇦🇹",
   Jordan:"🇯🇴",Portugal:"🇵🇹",Uzbekistan:"🇺🇿",Colombia:"🇨🇴","DR Congo":"🇨🇩",
@@ -27,78 +27,78 @@ function noAccent(s){return s.replace(/[άΆ]/g,"Α").replace(/[έΈ]/g,"Ε").re
 const caps = s => noAccent(s).toUpperCase();
 
 const SCHEDULE = [
-  {id:"m001",date:"2026-06-11",home:"Mexico",      away:"South Africa",      group:"A",phase:"group"},
-  {id:"m002",date:"2026-06-11",home:"South Korea", away:"Czech Republic",    group:"A",phase:"group"},
-  {id:"m003",date:"2026-06-12",home:"Canada",      away:"Bosnia-Herzegovina",group:"B",phase:"group"},
-  {id:"m004",date:"2026-06-12",home:"USA",         away:"Paraguay",          group:"D",phase:"group"},
-  {id:"m005",date:"2026-06-13",home:"Qatar",       away:"Switzerland",       group:"B",phase:"group"},
-  {id:"m006",date:"2026-06-13",home:"Brazil",      away:"Morocco",           group:"C",phase:"group"},
-  {id:"m007",date:"2026-06-13",home:"Haiti",       away:"Scotland",          group:"C",phase:"group"},
-  {id:"m008",date:"2026-06-13",home:"Australia",   away:"Türkiye",           group:"D",phase:"group"},
-  {id:"m009",date:"2026-06-14",home:"Germany",     away:"Curacao",           group:"E",phase:"group"},
-  {id:"m010",date:"2026-06-14",home:"Netherlands", away:"Japan",             group:"F",phase:"group"},
-  {id:"m011",date:"2026-06-14",home:"Ivory Coast", away:"Ecuador",           group:"E",phase:"group"},
-  {id:"m012",date:"2026-06-14",home:"Ukraine",     away:"Tunisia",           group:"F",phase:"group"},
-  {id:"m013",date:"2026-06-15",home:"Spain",       away:"Cape Verde",        group:"H",phase:"group"},
-  {id:"m014",date:"2026-06-15",home:"Belgium",     away:"Egypt",             group:"G",phase:"group"},
-  {id:"m015",date:"2026-06-15",home:"Saudi Arabia",away:"Uruguay",           group:"H",phase:"group"},
-  {id:"m016",date:"2026-06-15",home:"Iran",        away:"New Zealand",       group:"G",phase:"group"},
-  {id:"m017",date:"2026-06-16",home:"France",      away:"Senegal",           group:"I",phase:"group"},
-  {id:"m018",date:"2026-06-16",home:"Iraq",        away:"Norway",            group:"I",phase:"group"},
-  {id:"m019",date:"2026-06-16",home:"Argentina",   away:"Algeria",           group:"J",phase:"group"},
-  {id:"m020",date:"2026-06-16",home:"Austria",     away:"Jordan",            group:"J",phase:"group"},
-  {id:"m021",date:"2026-06-17",home:"Portugal",    away:"DR Congo",          group:"K",phase:"group"},
-  {id:"m022",date:"2026-06-17",home:"England",     away:"Croatia",           group:"L",phase:"group"},
-  {id:"m023",date:"2026-06-17",home:"Ghana",       away:"Panama",            group:"L",phase:"group"},
-  {id:"m024",date:"2026-06-17",home:"Uzbekistan",  away:"Colombia",          group:"K",phase:"group"},
-  {id:"m025",date:"2026-06-18",home:"Czech Republic",away:"South Africa",    group:"A",phase:"group"},
-  {id:"m026",date:"2026-06-18",home:"Switzerland", away:"Bosnia-Herzegovina",group:"B",phase:"group"},
-  {id:"m027",date:"2026-06-18",home:"Canada",      away:"Qatar",             group:"B",phase:"group"},
-  {id:"m028",date:"2026-06-18",home:"Mexico",      away:"South Korea",       group:"A",phase:"group"},
-  {id:"m029",date:"2026-06-19",home:"Scotland",    away:"Morocco",           group:"C",phase:"group"},
-  {id:"m030",date:"2026-06-19",home:"USA",         away:"Australia",         group:"D",phase:"group"},
-  {id:"m031",date:"2026-06-19",home:"Brazil",      away:"Haiti",             group:"C",phase:"group"},
-  {id:"m032",date:"2026-06-19",home:"Türkiye",     away:"Paraguay",          group:"D",phase:"group"},
-  {id:"m033",date:"2026-06-20",home:"Netherlands", away:"Ukraine",           group:"F",phase:"group"},
-  {id:"m034",date:"2026-06-20",home:"Germany",     away:"Ivory Coast",       group:"E",phase:"group"},
-  {id:"m035",date:"2026-06-20",home:"Ecuador",     away:"Curacao",           group:"E",phase:"group"},
-  {id:"m036",date:"2026-06-20",home:"Tunisia",     away:"Japan",             group:"F",phase:"group"},
-  {id:"m037",date:"2026-06-21",home:"Spain",       away:"Saudi Arabia",      group:"H",phase:"group"},
-  {id:"m038",date:"2026-06-21",home:"Belgium",     away:"Iran",              group:"G",phase:"group"},
-  {id:"m039",date:"2026-06-21",home:"Uruguay",     away:"Cape Verde",        group:"H",phase:"group"},
-  {id:"m040",date:"2026-06-21",home:"New Zealand", away:"Egypt",             group:"G",phase:"group"},
-  {id:"m041",date:"2026-06-22",home:"Argentina",   away:"Austria",           group:"J",phase:"group"},
-  {id:"m042",date:"2026-06-22",home:"France",      away:"Iraq",              group:"I",phase:"group"},
-  {id:"m043",date:"2026-06-22",home:"Norway",      away:"Senegal",           group:"I",phase:"group"},
-  {id:"m044",date:"2026-06-22",home:"Jordan",      away:"Algeria",           group:"J",phase:"group"},
-  {id:"m045",date:"2026-06-23",home:"Portugal",    away:"Uzbekistan",        group:"K",phase:"group"},
-  {id:"m046",date:"2026-06-23",home:"England",     away:"Ghana",             group:"L",phase:"group"},
-  {id:"m047",date:"2026-06-23",home:"Panama",      away:"Croatia",           group:"L",phase:"group"},
-  {id:"m048",date:"2026-06-23",home:"Colombia",    away:"DR Congo",          group:"K",phase:"group"},
-  {id:"m049",date:"2026-06-24",home:"Switzerland", away:"Canada",            group:"B",phase:"group"},
-  {id:"m050",date:"2026-06-24",home:"Bosnia-Herzegovina",away:"Qatar",       group:"B",phase:"group"},
-  {id:"m051",date:"2026-06-24",home:"Scotland",    away:"Brazil",            group:"C",phase:"group"},
-  {id:"m052",date:"2026-06-24",home:"Morocco",     away:"Haiti",             group:"C",phase:"group"},
-  {id:"m053",date:"2026-06-24",home:"Czech Republic",away:"Mexico",          group:"A",phase:"group"},
-  {id:"m054",date:"2026-06-24",home:"South Africa",away:"South Korea",       group:"A",phase:"group"},
-  {id:"m055",date:"2026-06-25",home:"Ecuador",     away:"Germany",           group:"E",phase:"group"},
-  {id:"m056",date:"2026-06-25",home:"Curacao",     away:"Ivory Coast",       group:"E",phase:"group"},
-  {id:"m057",date:"2026-06-25",home:"Japan",       away:"Ukraine",           group:"F",phase:"group"},
-  {id:"m058",date:"2026-06-25",home:"Tunisia",     away:"Netherlands",       group:"F",phase:"group"},
-  {id:"m059",date:"2026-06-25",home:"Türkiye",     away:"USA",               group:"D",phase:"group"},
-  {id:"m060",date:"2026-06-25",home:"Paraguay",    away:"Australia",         group:"D",phase:"group"},
-  {id:"m061",date:"2026-06-26",home:"Norway",      away:"France",            group:"I",phase:"group"},
-  {id:"m062",date:"2026-06-26",home:"Senegal",     away:"Iraq",              group:"I",phase:"group"},
-  {id:"m063",date:"2026-06-26",home:"Cape Verde",  away:"Saudi Arabia",      group:"H",phase:"group"},
-  {id:"m064",date:"2026-06-26",home:"Uruguay",     away:"Spain",             group:"H",phase:"group"},
-  {id:"m065",date:"2026-06-26",home:"Egypt",       away:"Iran",              group:"G",phase:"group"},
-  {id:"m066",date:"2026-06-26",home:"New Zealand", away:"Belgium",           group:"G",phase:"group"},
-  {id:"m067",date:"2026-06-27",home:"Panama",      away:"England",           group:"L",phase:"group"},
-  {id:"m068",date:"2026-06-27",home:"Croatia",     away:"Ghana",             group:"L",phase:"group"},
-  {id:"m069",date:"2026-06-27",home:"Colombia",    away:"Portugal",          group:"K",phase:"group"},
-  {id:"m070",date:"2026-06-27",home:"DR Congo",    away:"Uzbekistan",        group:"K",phase:"group"},
-  {id:"m071",date:"2026-06-27",home:"Algeria",     away:"Austria",           group:"J",phase:"group"},
-  {id:"m072",date:"2026-06-27",home:"Jordan",      away:"Argentina",         group:"J",phase:"group"},
+  {id:"m001",date:"2026-06-11",gtime:"22:00",home:"Mexico",            away:"South Africa",        group:"A",phase:"group"},
+  {id:"m002",date:"2026-06-11",gtime:"05:00",home:"South Korea",       away:"Czech Republic",      group:"A",phase:"group"},
+  {id:"m003",date:"2026-06-12",gtime:"22:00",home:"Canada",            away:"Bosnia-Herzegovina",  group:"B",phase:"group"},
+  {id:"m004",date:"2026-06-12",gtime:"04:00",home:"USA",               away:"Paraguay",            group:"D",phase:"group"},
+  {id:"m005",date:"2026-06-13",gtime:"22:00",home:"Qatar",             away:"Switzerland",         group:"B",phase:"group"},
+  {id:"m006",date:"2026-06-13",gtime:"01:00",home:"Brazil",            away:"Morocco",             group:"C",phase:"group"},
+  {id:"m007",date:"2026-06-13",gtime:"04:00",home:"Haiti",             away:"Scotland",            group:"C",phase:"group"},
+  {id:"m008",date:"2026-06-13",gtime:"07:00",home:"Australia",         away:"Türkiye",             group:"D",phase:"group"},
+  {id:"m009",date:"2026-06-14",gtime:"20:00",home:"Germany",           away:"Curacao",             group:"E",phase:"group"},
+  {id:"m010",date:"2026-06-14",gtime:"23:00",home:"Netherlands",       away:"Japan",               group:"F",phase:"group"},
+  {id:"m011",date:"2026-06-14",gtime:"02:00",home:"Ivory Coast",       away:"Ecuador",             group:"E",phase:"group"},
+  {id:"m012",date:"2026-06-14",gtime:"05:00",home:"Sweden",            away:"Tunisia",             group:"F",phase:"group"},
+  {id:"m013",date:"2026-06-15",gtime:"19:00",home:"Spain",             away:"Cape Verde",          group:"H",phase:"group"},
+  {id:"m014",date:"2026-06-15",gtime:"22:00",home:"Belgium",           away:"Egypt",               group:"G",phase:"group"},
+  {id:"m015",date:"2026-06-15",gtime:"01:00",home:"Saudi Arabia",      away:"Uruguay",             group:"H",phase:"group"},
+  {id:"m016",date:"2026-06-15",gtime:"04:00",home:"Iran",              away:"New Zealand",         group:"G",phase:"group"},
+  {id:"m017",date:"2026-06-16",gtime:"22:00",home:"France",            away:"Senegal",             group:"I",phase:"group"},
+  {id:"m018",date:"2026-06-16",gtime:"01:00",home:"Iraq",              away:"Norway",              group:"I",phase:"group"},
+  {id:"m019",date:"2026-06-16",gtime:"04:00",home:"Argentina",         away:"Algeria",             group:"J",phase:"group"},
+  {id:"m020",date:"2026-06-16",gtime:"07:00",home:"Austria",           away:"Jordan",              group:"J",phase:"group"},
+  {id:"m021",date:"2026-06-17",gtime:"20:00",home:"Portugal",          away:"DR Congo",            group:"K",phase:"group"},
+  {id:"m022",date:"2026-06-17",gtime:"23:00",home:"England",           away:"Croatia",             group:"L",phase:"group"},
+  {id:"m023",date:"2026-06-17",gtime:"02:00",home:"Ghana",             away:"Panama",              group:"L",phase:"group"},
+  {id:"m024",date:"2026-06-17",gtime:"05:00",home:"Uzbekistan",        away:"Colombia",            group:"K",phase:"group"},
+  {id:"m025",date:"2026-06-18",gtime:"19:00",home:"Czech Republic",    away:"South Africa",        group:"A",phase:"group"},
+  {id:"m026",date:"2026-06-18",gtime:"22:00",home:"Switzerland",       away:"Bosnia-Herzegovina",  group:"B",phase:"group"},
+  {id:"m027",date:"2026-06-18",gtime:"01:00",home:"Canada",            away:"Qatar",               group:"B",phase:"group"},
+  {id:"m028",date:"2026-06-18",gtime:"04:00",home:"Mexico",            away:"South Korea",         group:"A",phase:"group"},
+  {id:"m029",date:"2026-06-19",gtime:"22:00",home:"USA",               away:"Australia",           group:"D",phase:"group"},
+  {id:"m030",date:"2026-06-19",gtime:"01:00",home:"Scotland",          away:"Morocco",             group:"C",phase:"group"},
+  {id:"m031",date:"2026-06-19",gtime:"03:30",home:"Brazil",            away:"Haiti",               group:"C",phase:"group"},
+  {id:"m032",date:"2026-06-19",gtime:"06:00",home:"Türkiye",           away:"Paraguay",            group:"D",phase:"group"},
+  {id:"m033",date:"2026-06-20",gtime:"20:00",home:"Netherlands",       away:"Sweden",              group:"F",phase:"group"},
+  {id:"m034",date:"2026-06-20",gtime:"23:00",home:"Germany",           away:"Ivory Coast",         group:"E",phase:"group"},
+  {id:"m035",date:"2026-06-20",gtime:"06:00",home:"Ecuador",           away:"Curacao",             group:"E",phase:"group"},
+  {id:"m036",date:"2026-06-20",gtime:"07:00",home:"Tunisia",           away:"Japan",               group:"F",phase:"group"},
+  {id:"m037",date:"2026-06-21",gtime:"19:00",home:"Spain",             away:"Saudi Arabia",        group:"H",phase:"group"},
+  {id:"m038",date:"2026-06-21",gtime:"22:00",home:"Belgium",           away:"Iran",                group:"G",phase:"group"},
+  {id:"m039",date:"2026-06-21",gtime:"01:00",home:"Uruguay",           away:"Cape Verde",          group:"H",phase:"group"},
+  {id:"m040",date:"2026-06-21",gtime:"04:00",home:"New Zealand",       away:"Egypt",               group:"G",phase:"group"},
+  {id:"m041",date:"2026-06-22",gtime:"20:00",home:"Argentina",         away:"Austria",             group:"J",phase:"group"},
+  {id:"m042",date:"2026-06-22",gtime:"00:00",home:"France",            away:"Iraq",                group:"I",phase:"group"},
+  {id:"m043",date:"2026-06-22",gtime:"03:00",home:"Norway",            away:"Senegal",             group:"I",phase:"group"},
+  {id:"m044",date:"2026-06-22",gtime:"06:00",home:"Jordan",            away:"Algeria",             group:"J",phase:"group"},
+  {id:"m045",date:"2026-06-23",gtime:"20:00",home:"Portugal",          away:"Uzbekistan",          group:"K",phase:"group"},
+  {id:"m046",date:"2026-06-23",gtime:"23:00",home:"England",           away:"Ghana",               group:"L",phase:"group"},
+  {id:"m047",date:"2026-06-23",gtime:"02:00",home:"Panama",            away:"Croatia",             group:"L",phase:"group"},
+  {id:"m048",date:"2026-06-23",gtime:"05:00",home:"Colombia",          away:"DR Congo",            group:"K",phase:"group"},
+  {id:"m049",date:"2026-06-24",gtime:"22:00",home:"Switzerland",       away:"Canada",              group:"B",phase:"group"},
+  {id:"m050",date:"2026-06-24",gtime:"22:00",home:"Bosnia-Herzegovina", away:"Qatar",               group:"B",phase:"group"},
+  {id:"m051",date:"2026-06-24",gtime:"01:00",home:"Scotland",          away:"Brazil",              group:"C",phase:"group"},
+  {id:"m052",date:"2026-06-24",gtime:"01:00",home:"Morocco",           away:"Haiti",               group:"C",phase:"group"},
+  {id:"m053",date:"2026-06-24",gtime:"04:00",home:"Czech Republic",    away:"Mexico",              group:"A",phase:"group"},
+  {id:"m054",date:"2026-06-24",gtime:"04:00",home:"South Africa",      away:"South Korea",         group:"A",phase:"group"},
+  {id:"m055",date:"2026-06-25",gtime:"23:00",home:"Ecuador",           away:"Germany",             group:"E",phase:"group"},
+  {id:"m056",date:"2026-06-25",gtime:"23:00",home:"Curacao",           away:"Ivory Coast",         group:"E",phase:"group"},
+  {id:"m057",date:"2026-06-25",gtime:"02:00",home:"Japan",             away:"Sweden",              group:"F",phase:"group"},
+  {id:"m058",date:"2026-06-25",gtime:"02:00",home:"Tunisia",           away:"Netherlands",         group:"F",phase:"group"},
+  {id:"m059",date:"2026-06-25",gtime:"05:00",home:"Türkiye",           away:"USA",                 group:"D",phase:"group"},
+  {id:"m060",date:"2026-06-25",gtime:"05:00",home:"Paraguay",          away:"Australia",           group:"D",phase:"group"},
+  {id:"m061",date:"2026-06-26",gtime:"22:00",home:"Norway",            away:"France",              group:"I",phase:"group"},
+  {id:"m062",date:"2026-06-26",gtime:"22:00",home:"Senegal",           away:"Iraq",                group:"I",phase:"group"},
+  {id:"m063",date:"2026-06-26",gtime:"03:00",home:"Cape Verde",        away:"Saudi Arabia",        group:"H",phase:"group"},
+  {id:"m064",date:"2026-06-26",gtime:"03:00",home:"Uruguay",           away:"Spain",               group:"H",phase:"group"},
+  {id:"m065",date:"2026-06-26",gtime:"06:00",home:"Egypt",             away:"Iran",                group:"G",phase:"group"},
+  {id:"m066",date:"2026-06-26",gtime:"06:00",home:"New Zealand",       away:"Belgium",             group:"G",phase:"group"},
+  {id:"m067",date:"2026-06-27",gtime:"00:00",home:"Panama",            away:"England",             group:"L",phase:"group"},
+  {id:"m068",date:"2026-06-27",gtime:"00:00",home:"Croatia",           away:"Ghana",               group:"L",phase:"group"},
+  {id:"m069",date:"2026-06-27",gtime:"02:30",home:"Colombia",          away:"Portugal",            group:"K",phase:"group"},
+  {id:"m070",date:"2026-06-27",gtime:"02:30",home:"DR Congo",          away:"Uzbekistan",          group:"K",phase:"group"},
+  {id:"m071",date:"2026-06-27",gtime:"05:00",home:"Algeria",           away:"Austria",             group:"J",phase:"group"},
+  {id:"m072",date:"2026-06-27",gtime:"05:00",home:"Jordan",            away:"Argentina",           group:"J",phase:"group"},
   {id:"r32_01",date:"2026-06-28",home:"TBD",away:"TBD",phase:"round32",label:"R32 — M1"},
   {id:"r32_02",date:"2026-06-29",home:"TBD",away:"TBD",phase:"round32",label:"R32 — M2"},
   {id:"r32_03",date:"2026-06-29",home:"TBD",away:"TBD",phase:"round32",label:"R32 — M3"},
@@ -134,6 +134,8 @@ const SCHEDULE = [
 ];
 
 const BY_DATE = SCHEDULE.reduce((a,m)=>{ (a[m.date]??=[]).push(m); return a; },{});
+const SCHED_BY_ID = SCHEDULE.reduce((a,m)=>{ a[m.id]=m; return a; },{});
+const addDays=(dateStr,n)=>{const d=new Date(dateStr+"T12:00:00");d.setDate(d.getDate()+n);return d.toISOString().slice(0,10);};
 const ALL_DATES = Object.keys(BY_DATE).sort();
 const PHASE_LABEL = {group:"Ομιλοι",round32:"Round of 32",round16:"Round of 16",quarter:"Quarter Final",semi:"Semi Final",bronze:"3η Θεση",final:"Τελικος"};
 
@@ -365,35 +367,38 @@ export default function App(){
   const [results,setResults]=useState({});         // matchId -> "1"|"X"|"2"
   const [apiTeams,setApiTeams]=useState({});       // matchId -> {home,away}
   const [matchTimes,setMatchTimes]=useState({});   // matchId -> "HH:MM" (Greek time)
+  const [adjustments,setAdjustments]=useState({}); // userId -> manual points (+/-)
   const [apiKey,setApiKey]=useState("");
   const [lastFetch,setLastFetch]=useState(null);
   const [nowTick,setNowTick]=useState(Date.now()); // updates every 30s for lock checks
 
-  const today=new Date().toISOString().slice(0,10);
+  // ── ΩΡΑ & ΑΓΩΝΙΣΤΙΚΗ ΒΡΑΔΙΑ (ωρα Ελλαδας) ──
+  // Ενα "ματς-βραδι" τρεχει απο τις 08:00 μιας μερας μεχρι τις 08:00 της επομενης.
+  // Ολα τα ματς που παιζονται 22:00→08:00 ανηκουν στη βραδια που ξεκινησε το προηγουμενο βραδυ.
+  const greekNow=new Date(new Date(nowTick).toLocaleString("en-US",{timeZone:"Europe/Athens"}));
+  const greekHour=greekNow.getHours();
+  const pad2=n=>String(n).padStart(2,"0");
+  const greekDateStr=`${greekNow.getFullYear()}-${pad2(greekNow.getMonth()+1)}-${pad2(greekNow.getDate())}`;
+  // Η τρεχουσα "βραδια": αν ειναι πριν τις 08:00 → ανηκει στη χθεσινη βραδια, αλλιως στη σημερινη
+  const currentNight = greekHour<8 ? addDays(greekDateStr,-1) : greekDateStr;
+  const today=currentNight; // ο,τι λεγαμε "σημερα" = η τρεχουσα αγωνιστικη βραδια
   const showToast=(msg,type="ok")=>{setToast({msg,type});setTimeout(()=>setToast(null),2600);};
 
-  // clock tick for auto-lock (every 30s)
+  // clock tick for auto-lock + auto-advance (every 30s)
   useEffect(()=>{ const t=setInterval(()=>setNowTick(Date.now()),30000); return ()=>clearInterval(t); },[]);
 
-  // ── LOCK LOGIC: a match locks 15min before its kickoff (Greek time) ──
-  // matchTimes[id] = "HH:MM" for the match's date. Returns true if voting is closed.
-  // NOTE: if the kickoff time is early morning (before 08:00), it's treated as the
-  // early hours of the NEXT calendar day — e.g. a "today" match at 04:00 actually
-  // kicks off after midnight, so it must NOT lock during today's daytime.
-  function isLocked(matchId, matchDate){
-    const hhmm=matchTimes[matchId];
-    if(!hhmm) return false; // no time set → stays open
+  // ── LOCK LOGIC: ενα ματς κλειδωνει 15' πριν την εναρξη του (ωρα Ελλαδας) ──
+  // Ωρα: matchTimes[id] (χειροκινητη υπερισχυει) αλλιως το προ-συμπληρωμενο gtime.
+  // Πρωινες ωρες (<12:00) σημαινει ξημερωματα → η εναρξη ειναι την ΕΠΟΜΕΝΗ μερα απο τη βραδια.
+  function kickoffTime(matchId){ return matchTimes[matchId] || SCHED_BY_ID[matchId]?.gtime || ""; }
+  function isLocked(matchId, nightDate){
+    const hhmm=kickoffTime(matchId);
+    if(!hhmm) return false; // χωρις ωρα → μενει ανοιχτο
     const [h,m]=hhmm.split(":").map(Number);
     if(isNaN(h)||isNaN(m)) return false;
-    // determine the real kickoff calendar date: early-morning times roll to next day
-    let kdate=matchDate;
-    if(h<8){ // 00:00–07:59 → next day
-      const d=new Date(matchDate+"T12:00:00");
-      d.setDate(d.getDate()+1);
-      kdate=d.toISOString().slice(0,10);
-    }
+    const kdate = h<12 ? addDays(nightDate,1) : nightDate; // ξημερωματα → επομενη μερα
     const nowAthens=new Date(new Date(nowTick).toLocaleString("en-US",{timeZone:"Europe/Athens"}));
-    const kickoff=new Date(`${kdate}T${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}:00`);
+    const kickoff=new Date(`${kdate}T${pad2(h)}:${pad2(m)}:00`);
     const lockAt=new Date(kickoff.getTime()-15*60*1000);
     return nowAthens.getTime() >= lockAt.getTime();
   }
@@ -420,6 +425,7 @@ export default function App(){
         if(row.key==="results") setResults(row.value||{});
         if(row.key==="apiTeams") setApiTeams(row.value||{});
         if(row.key==="matchTimes") setMatchTimes(row.value||{});
+        if(row.key==="adjustments") setAdjustments(row.value||{});
         if(row.key==="meta"){ setApiKey(row.value?.apiKey||""); setLastFetch(row.value?.lastFetch||null); }
       });
     }catch(e){ console.error("loadAll error",e); }
@@ -524,6 +530,14 @@ export default function App(){
     await supabase.from("predictions").delete().eq("user_id",uid).eq("match_date",date);
     await loadAll();
     showToast("Οι ψηφοι καθαριστηκαν");
+  }
+  // ── ADMIN: add/remove manual points to a player ──
+  async function adjustPoints(uid, delta){
+    const merged={...adjustments, [uid]:(adjustments[uid]||0)+delta};
+    if(merged[uid]===0) delete merged[uid];
+    setAdjustments(merged);
+    await supabase.from("game_data").upsert({key:"adjustments",value:merged,updated_at:new Date().toISOString()});
+    showToast(delta>0?`+${delta} ποντος/οι`:`${delta} ποντος/οι`);
   }
 
   // ── SHARE LEADERBOARD as image ──
@@ -633,26 +647,17 @@ export default function App(){
   const myDayPts=calcDayPts(today,myPreds,results);
   const myStats=me?playerStats(myPreds,results):null;
   const daysWithRes=ALL_DATES.filter(d=>(BY_DATE[d]||[]).some(m=>results[m.id]));
-  const board=users.map(u=>{const p=predictions[u.id]||{};const rows=ALL_DATES.map(d=>({date:d,pts:calcDayPts(d,p,results)}));return{...u,isAdmin:u.is_admin,rows,total:rows.reduce((s,r)=>s+r.pts,0)};}).sort((a,b)=>b.total-a.total);
+  const board=users.map(u=>{const p=predictions[u.id]||{};const rows=ALL_DATES.map(d=>({date:d,pts:calcDayPts(d,p,results)}));const adj=adjustments[u.id]||0;return{...u,isAdmin:u.is_admin,rows,adj,base:rows.reduce((s,r)=>s+r.pts,0),total:rows.reduce((s,r)=>s+r.pts,0)+adj};}).sort((a,b)=>b.total-a.total);
   const myBoard=board.find(u=>u.id===me?.id);
   // ── ΑΓΩΝΙΣΤΙΚΗ ΒΡΑΔΙΑ ──
-  // Τα "σημερινα" ματς = ολα της σημερινης ημερομηνιας + τα ξημερωματιστικα
-  // της επομενης μερας (ωρα <08:00), που ανηκουν στη ΣΗΜΕΡΙΝΗ βραδια.
-  // Καθε τετοιο ματς το σημαδευουμε με voteDate=today ωστε η ψηφος να
-  // αποθηκευεται/μετραει για τη σωστη "βραδια".
-  const nextDay=(()=>{const d=new Date(today+"T12:00:00");d.setDate(d.getDate()+1);return d.toISOString().slice(0,10);})();
-  const todayMatches=[
-    // σημερινα ματς ΕΚΤΟΣ απο τα ξημερωματιστικα (αυτα ανηκουν στη χθεσινη βραδια)
-    ...(BY_DATE[today]||[]).filter(m=>{
-      const t=matchTimes[m.id]; if(!t) return true; // χωρις ωρα → μενει στη μερα του
-      const h=Number(t.split(":")[0]); return !(h<8); // <08:00 → αφαιρειται (ανηκει στη χθεσινη βραδια)
-    }).map(m=>({...resolve(m), voteDate:today})),
-    // + τα ξημερωματιστικα της επομενης μερας (ανηκουν στη ΣΗΜΕΡΙΝΗ βραδια)
-    ...(BY_DATE[nextDay]||[]).filter(m=>{
-      const t=matchTimes[m.id]; if(!t) return false;
-      const h=Number(t.split(":")[0]); return !isNaN(h)&&h<8;
-    }).map(m=>({...resolve(m), voteDate:today, isNextDayEarly:true})),
-  ];
+  // Αφου το date καθε ματς ΕΙΝΑΙ η βραδια στην οποια ανηκει, τα "σημερινα" ματς
+  // ειναι απλα οσα εχουν date === τρεχουσα βραδια. Τα ξημερωματιστικα (gtime<12:00)
+  // σημαδευονται ωστε να φαινεται "🌙 Ξημερωματα" στην καρτα.
+  const todayMatches=(BY_DATE[today]||[]).map(m=>{
+    const t=kickoffTime(m.id);
+    const isEarly = t && Number(t.split(":")[0])<12;
+    return {...resolve(m), voteDate:today, isNextDayEarly:isEarly};
+  });
 
   // Confetti when my number of correct predictions increases
   useEffect(()=>{
@@ -685,12 +690,12 @@ export default function App(){
         <div key={phase}>
           <div className="psep"><span className="plabel">{caps(PHASE_LABEL[phase])}{ms[0]?.group?` · ΟΜ. ${ms[0].group}`:""}</span></div>
           {ms.map(m=>{
-            const mDate=m.date; // real calendar date of the match
+            const mDate=m.date; // η βραδια στην οποια ανηκει το ματς
             const pick=dp[m.id],res=m.result;
             const won=pick&&res&&pick===res,lost=pick&&res&&pick!==res;
             const timeLocked=isLocked(m.id,mDate);
             const locked=!!pick||timeLocked; // can't vote if already voted OR time passed
-            const kickoff=matchTimes[m.id];
+            const kickoff=kickoffTime(m.id);
             const crowd=timeLocked?crowdVotes(m.id,today,predictions):null;
             const revealed=timeLocked;
             return(<div key={m.id} className={`mc${won?" won":lost?" lost":pick?" voted":""}`}>
@@ -698,12 +703,12 @@ export default function App(){
                 <div className="mc-side"><span className="mc-bigflag">{F(m.home)}</span><span className="mc-team">{m.home}</span></div>
                 <div className="mc-mid">
                   <span className="mc-vs">VS</span>
-                  {kickoff&&<span className="mc-time">{timeLocked?"🔒 ":"⏰ "}{kickoff}{m.isNextDayEarly?" ⁺¹":""}</span>}
+                  {kickoff&&<span className="mc-time">{timeLocked?"🔒 ":"⏰ "}{kickoff}</span>}
                   {res?<span className={`mc-result-pill ${won?"win":"loss"}`}>{won?"✓ +1":`Ληξη ${res}`}</span>:pick?<span className="mc-result-pill pend">⏳</span>:null}
                 </div>
                 <div className="mc-side"><span className="mc-bigflag">{F(m.away)}</span><span className="mc-team">{m.away}</span></div>
               </div>
-              {m.isNextDayEarly&&<div className="mc-nextday">🌙 Ξημερωματα {fmtShort(mDate)} — ανηκει στη σημερινη βραδια</div>}
+              {m.isNextDayEarly&&<div className="mc-nextday">🌙 Ξημερωματα {fmtShort(addDays(mDate,1))}</div>}
               <div className="mc-votes">
                 {["1","X","2"].map(v=>(<button key={v} className={`bigv${pick===v?` s${v}`:""}${locked?" lk":""}`} onClick={()=>!locked&&vote(m.id,v,today,mDate)}>
                   {pick===v&&<span className="bigv-lock">🔒</span>}
@@ -793,7 +798,7 @@ export default function App(){
       )}
       {daysWithRes.length===0&&<div className="lb-empty">Κανενα αποτελεσμα ακομα. Η καταταξη εμφανιζεται με τα πρωτα αποτελεσματα.</div>}
       <div className="lb-card"><div className="lb-scroll"><table className="lb-tbl">
-        <thead><tr><th>#</th><th>Παικτης</th>{daysWithRes.map(d=><th key={d}>{fmtShort(d)}</th>)}<th>Συν.</th></tr></thead>
+        <thead><tr><th>#</th><th>Παικτης</th><th>Συν.</th>{daysWithRes.map(d=><th key={d}>{fmtShort(d)}</th>)}</tr></thead>
         <tbody>{board.map((u,i)=>{const rc=i===0?"g":i===1?"s":i===2?"b":"";const medal=i===0?"🥇":i===1?"🥈":i===2?"🥉":null;
           const ubadges=computeBadges(predictions[u.id]||{},results,i===0&&u.total>0);
           return(<tr key={u.id} className={`lb-row${u.id===me?.id?" me-row":""}`}>
@@ -801,8 +806,8 @@ export default function App(){
             <td><span className="ucell">{u.username}{u.id===me?.id&&<span className="me-badge">ΕΣΥ</span>}{u.isAdmin&&<span style={{fontSize:".58rem",color:"var(--muted)",marginLeft:4}}>⚙</span>}</span>
               {ubadges.length>0&&<span className="row-badges">{ubadges.slice(0,3).map((b,bi)=><span key={bi} className="row-badge" title={b.name+" · "+b.desc}>{b.icon}</span>)}</span>}
             </td>
-            {daysWithRes.map(d=>{const pts=u.rows.find(r=>r.date===d)?.pts||0;return<td key={d}><span className={`dc ${pts>0?"pos":"zero"}`}>{pts>0?`+${pts}`:"—"}</span></td>;})}
             <td><span className="tcell">{u.total}</span></td>
+            {daysWithRes.map(d=>{const pts=u.rows.find(r=>r.date===d)?.pts||0;return<td key={d}><span className={`dc ${pts>0?"pos":"zero"}`}>{pts>0?`+${pts}`:"—"}</span></td>;})}
           </tr>);
         })}</tbody>
       </table></div></div>
@@ -854,15 +859,15 @@ export default function App(){
         const tMs=(BY_DATE[adminTimeDate]||[]).map(resolve);
         const nextDayLabel=(()=>{const d=new Date(adminTimeDate+"T12:00:00");d.setDate(d.getDate()+1);return d.toLocaleDateString("el-GR",{day:"numeric",month:"short"});})();
         return(<>
-          <div className="info-bar">Βαλε την <b>ωρα εναρξης</b> καθε ματς σε <b>ωρα Ελλαδας</b> (πχ 22:00). Η ψηφοφορια κλειδωνει αυτοματα <b>15' πριν</b>. Ασε κενο = μενει ανοιχτο.<br/><br/>⏰ <b>Ματς μετα τα μεσανυχτα:</b> αν βαλεις ωρα πριν τις 08:00 (πχ 04:00), το συστημα το θεωρει αυτοματα ξημερωματα της <b>επομενης μερας</b> ({nextDayLabel}) — δεν κλειδωνει νωριτερα.</div>
+          <div className="info-bar">Οι ωρες ειναι <b>ηδη συμπληρωμενες</b> απο το επισημο προγραμμα (ωρα Ελλαδας). Αλλαξε καποια μονο αν χρειαστει. Η ψηφοφορια κλειδωνει αυτοματα <b>15' πριν</b>.<br/><br/>🌙 Ωρες πριν τις 12:00 = ξημερωματα της επομενης μερας ({nextDayLabel}).</div>
           <div className="dstrip">{ALL_DATES.map(d=><button key={d} className={`dtab${d===adminTimeDate?" on":""}`} onClick={()=>setAdminTimeDate(d)}>{fmtShort(d)}</button>)}</div>
           <div className="asec"><div className="asec-h">{fmtLong(adminTimeDate)}</div>
             {tMs.length===0&&<div style={{color:"var(--muted)",fontSize:".8rem"}}>Δεν υπαρχουν ματς.</div>}
             {tMs.map(m=>{
-              const cur = (m.id in timeDraft) ? timeDraft[m.id] : (matchTimes[m.id]||"");
+              const cur = (m.id in timeDraft) ? timeDraft[m.id] : (matchTimes[m.id]||m.gtime||"");
               const curH = cur ? cur.split(":")[0] : "";
               const curM = cur ? cur.split(":")[1] : "";
-              const isNextDay = cur && Number(curH)<8;
+              const isNextDay = cur && Number(curH)<12;
               const setHM=(h,mm)=>{ if(h===""&&mm===""){ setTimeDraft(d=>({...d,[m.id]:""})); return; } const H=(h===""?(curH||"00"):h).padStart(2,"0"); const M=(mm===""?(curM||"00"):mm).padStart(2,"0"); setTimeDraft(d=>({...d,[m.id]:`${H}:${M}`})); };
               return(<div key={m.id} className="am">
                 <div className="am-l"><div className="am-team">{F(m.home)} {m.home} vs {m.away} {F(m.away)}</div><div className="am-sub">{m.label||`Ομ. ${m.group}`}{isNextDay&&<span style={{color:"var(--gold3)"}}> · ξημερωματα {nextDayLabel}</span>}</div></div>
@@ -906,23 +911,26 @@ export default function App(){
         </div>
       </>)}
       {adminTab==="users"&&(<div className="asec"><div className="asec-h">Μελη ({users.length})</div>
-        <div className="info-bar" style={{marginBottom:".8rem"}}>🗑️ <b>Καθαρισμος ψηφων:</b> διαλεξε μερα και πατα «Καθαρισμα» για να σβησεις τις ψηφους ενος παικτη εκεινη τη μερα — ωστε να ξαναψηφισει. <b>Μονο ο admin</b> το βλεπει αυτο.</div>
-        {users.map(u=>{const total=calcTotal(predictions[u.id]||{},results);const vs=ALL_DATES.reduce((s,d)=>s+Object.keys((predictions[u.id]||{})[d]||{}).length,0);
+        <div className="info-bar" style={{marginBottom:".8rem"}}>🗑️ <b>Καθαρισμος ψηφων:</b> διαλεξε μερα και πατα «Καθαρισμα» για να ξαναψηφισει ο παικτης.<br/>➕➖ <b>Ποντοι:</b> προσθεσε/αφαιρεσε χειροκινητα ποντους (πχ μπονους ή διορθωση). <b>Μονο ο admin.</b></div>
+        {users.map(u=>{const base=calcTotal(predictions[u.id]||{},results);const adj=adjustments[u.id]||0;const total=base+adj;const vs=ALL_DATES.reduce((s,d)=>s+Object.keys((predictions[u.id]||{})[d]||{}).length,0);
           const userDays=ALL_DATES.filter(d=>Object.keys((predictions[u.id]||{})[d]||{}).length>0);
           const selDay=clearDaySel[u.id]||userDays[userDays.length-1]||"";
           return(<div key={u.id} className="ur" style={{flexWrap:"wrap"}}>
             <span style={{flex:1,minWidth:100,fontFamily:"'Rajdhani',sans-serif",fontWeight:700,fontSize:".95rem"}}>{u.username}{u.is_admin?" 👑":""}</span>
             <span style={{color:"var(--muted)",fontSize:".75rem"}}>{vs} ψηφ.</span>
-            <span style={{color:"var(--gold2)",fontWeight:700,fontFamily:"'Orbitron',sans-serif",fontSize:".85rem"}}>{total}</span>
+            <span style={{color:"var(--gold2)",fontWeight:700,fontFamily:"'Orbitron',sans-serif",fontSize:".85rem"}} title={adj!==0?`${base} + ${adj} bonus`:""}>{total}{adj!==0&&<span style={{fontSize:".62rem",color:adj>0?"var(--green)":"var(--red)",marginLeft:3}}>({adj>0?"+":""}{adj})</span>}</span>
             {!u.is_admin&&<button className="del" onClick={()=>delUser(u.id)}>✕</button>}
-            {userDays.length>0&&(
-              <div style={{display:"flex",gap:".3rem",width:"100%",marginTop:".4rem",alignItems:"center"}}>
-                <select className="day-select" value={selDay} onChange={e=>setClearDaySel(p=>({...p,[u.id]:e.target.value}))}>
+            <div style={{display:"flex",gap:".3rem",width:"100%",marginTop:".4rem",alignItems:"center"}}>
+              <span className="pts-adj-lbl">Ποντοι:</span>
+              <button className="pts-adj minus" onClick={()=>adjustPoints(u.id,-1)}>−1</button>
+              <button className="pts-adj plus" onClick={()=>adjustPoints(u.id,+1)}>+1</button>
+              {userDays.length>0&&<>
+                <select className="day-select" value={selDay} onChange={e=>setClearDaySel(p=>({...p,[u.id]:e.target.value}))} style={{flex:1,marginLeft:".3rem"}}>
                   {userDays.map(d=><option key={d} value={d}>{fmtLong(d)} ({Object.keys((predictions[u.id]||{})[d]||{}).length} ψηφ.)</option>)}
                 </select>
-                <button className="bsm b-dark" onClick={()=>clearVotes(u.id,selDay)} style={{whiteSpace:"nowrap"}}>🗑️ Καθαρισμα</button>
-              </div>
-            )}
+                <button className="bsm b-dark" onClick={()=>clearVotes(u.id,selDay)} style={{whiteSpace:"nowrap"}}>🗑️</button>
+              </>}
+            </div>
           </div>);
         })}
       </div>)}
@@ -1209,6 +1217,12 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Inter'
 .time-clear:hover{background:rgba(255,100,100,0.2);}
 .day-select{flex:1;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.14);border-radius:8px;color:var(--text);font-family:'Rajdhani',sans-serif;font-size:.82rem;font-weight:600;padding:.4rem .5rem;outline:none;transition:all .15s;color-scheme:dark;cursor:pointer;}
 .day-select:focus{border-color:var(--gold3);}
+.pts-adj-lbl{font-family:'Rajdhani',sans-serif;font-size:.75rem;font-weight:700;color:var(--muted);letter-spacing:.5px;}
+.pts-adj{font-family:'Orbitron',sans-serif;font-weight:700;font-size:.8rem;width:38px;height:30px;border-radius:7px;cursor:pointer;transition:all .12s;border:1px solid;}
+.pts-adj.plus{background:rgba(67,224,140,0.12);border-color:rgba(67,224,140,0.3);color:var(--green);}
+.pts-adj.plus:hover{background:rgba(67,224,140,0.22);}
+.pts-adj.minus{background:rgba(255,100,100,0.1);border-color:rgba(255,100,100,0.25);color:var(--red);}
+.pts-adj.minus:hover{background:rgba(255,100,100,0.2);}
 .streak-card{display:flex;align-items:center;gap:.9rem;background:linear-gradient(135deg,rgba(255,140,40,0.12),rgba(244,203,85,0.08));border:1px solid rgba(255,140,40,0.25);border-radius:var(--r2);padding:1rem 1.2rem;margin-bottom:1rem;box-shadow:0 8px 24px rgba(0,0,0,0.4);}
 .streak-flame{font-size:2.2rem;filter:drop-shadow(0 0 10px rgba(255,140,40,0.4));animation:flicker 2s ease-in-out infinite;}
 @keyframes flicker{0%,100%{transform:scale(1) rotate(-2deg);}50%{transform:scale(1.08) rotate(2deg);}}
