@@ -137,15 +137,25 @@ const BY_DATE = SCHEDULE.reduce((a,m)=>{ (a[m.date]??=[]).push(m); return a; },{
 const ALL_DATES = Object.keys(BY_DATE).sort();
 const PHASE_LABEL = {group:"Ομιλοι",round32:"Round of 32",round16:"Round of 16",quarter:"Quarter Final",semi:"Semi Final",bronze:"3η Θεση",final:"Τελικος"};
 
-const calcDayPts=(date,up,res)=>(BY_DATE[date]||[]).reduce((s,m)=>{const r=res[m.id],p=up?.[date]?.[m.id];return s+(r&&p&&p===r?1:0);},0);
-const calcTotal=(up,res)=>ALL_DATES.reduce((s,d)=>s+calcDayPts(d,up,res),0);
-function playerStats(up,res){let correct=0,wrong=0,total=0;ALL_DATES.forEach(d=>{(BY_DATE[d]||[]).forEach(m=>{const p=up?.[d]?.[m.id],r=res[m.id];if(p){total++;if(r){if(p===r)correct++;else wrong++;}}});});const dec=correct+wrong;return{correct,wrong,total,pct:dec?Math.round(correct/dec*100):0};}
+// Find a user's pick for a match, regardless of which "vote day" it was stored under.
+// (after-midnight matches are stored under the previous day's matchday-night)
+function findPick(up, matchId){
+  if(!up) return undefined;
+  for(const d in up){ if(up[d] && up[d][matchId]!=null) return up[d][matchId]; }
+  return undefined;
+}
 
-// Crowd vote distribution for a match: how many voted 1 / X / 2
+// Points for matches whose CALENDAR date is `date`. Looks up the pick anywhere
+// (so after-midnight matches still score even if voted on the previous night).
+const calcDayPts=(date,up,res)=>(BY_DATE[date]||[]).reduce((s,m)=>{const r=res[m.id],p=findPick(up,m.id);return s+(r&&p&&p===r?1:0);},0);
+const calcTotal=(up,res)=>ALL_DATES.reduce((s,d)=>s+calcDayPts(d,up,res),0);
+function playerStats(up,res){let correct=0,wrong=0,total=0;ALL_DATES.forEach(d=>{(BY_DATE[d]||[]).forEach(m=>{const p=findPick(up,m.id),r=res[m.id];if(p){total++;if(r){if(p===r)correct++;else wrong++;}}});});const dec=correct+wrong;return{correct,wrong,total,pct:dec?Math.round(correct/dec*100):0};}
+
+// Crowd vote distribution for a match: how many voted 1 / X / 2 (any vote-day)
 function crowdVotes(matchId, matchDate, predictions){
   let c1=0,cX=0,c2=0;
   Object.values(predictions).forEach(byDate=>{
-    const p=byDate?.[matchDate]?.[matchId];
+    const p=findPick(byDate,matchId);
     if(p==="1")c1++; else if(p==="X")cX++; else if(p==="2")c2++;
   });
   const total=c1+cX+c2;
@@ -477,13 +487,15 @@ export default function App(){
   function logout(){ localStorage.removeItem(LS_SESSION); setMe(null);setView("login");setLf({u:"",p:""}); }
 
   // ── VOTE (locked after submit OR after kickoff-15min) ──
-  async function vote(matchId,pick){
-    if(predictions[me.id]?.[today]?.[matchId])return;
-    if(isLocked(matchId,today)){ showToast("Η ψηφοφορια εκλεισε","err"); return; }
+  async function vote(matchId,pick,voteDate,matchDate){
+    const vd=voteDate||today;
+    const md=matchDate||today;
+    if(predictions[me.id]?.[vd]?.[matchId])return;
+    if(isLocked(matchId,md)){ showToast("Η ψηφοφορια εκλεισε","err"); return; }
     // optimistic
-    setPredictions(prev=>{const n={...prev};n[me.id]??={};n[me.id][today]??={};n[me.id][today]={...n[me.id][today],[matchId]:pick};return n;});
+    setPredictions(prev=>{const n={...prev};n[me.id]??={};n[me.id][vd]??={};n[me.id][vd]={...n[me.id][vd],[matchId]:pick};return n;});
     showToast("Ψηφος κλειδωθηκε");
-    const {error}=await supabase.from("predictions").insert({user_id:me.id,match_id:matchId,match_date:today,pick});
+    const {error}=await supabase.from("predictions").insert({user_id:me.id,match_id:matchId,match_date:vd,pick});
     if(error){ showToast("Σφαλμα — δοκιμασε ξανα","err"); loadAll(); }
   }
 
@@ -623,7 +635,24 @@ export default function App(){
   const daysWithRes=ALL_DATES.filter(d=>(BY_DATE[d]||[]).some(m=>results[m.id]));
   const board=users.map(u=>{const p=predictions[u.id]||{};const rows=ALL_DATES.map(d=>({date:d,pts:calcDayPts(d,p,results)}));return{...u,isAdmin:u.is_admin,rows,total:rows.reduce((s,r)=>s+r.pts,0)};}).sort((a,b)=>b.total-a.total);
   const myBoard=board.find(u=>u.id===me?.id);
-  const todayMatches=(BY_DATE[today]||[]).map(resolve);
+  // ── ΑΓΩΝΙΣΤΙΚΗ ΒΡΑΔΙΑ ──
+  // Τα "σημερινα" ματς = ολα της σημερινης ημερομηνιας + τα ξημερωματιστικα
+  // της επομενης μερας (ωρα <08:00), που ανηκουν στη ΣΗΜΕΡΙΝΗ βραδια.
+  // Καθε τετοιο ματς το σημαδευουμε με voteDate=today ωστε η ψηφος να
+  // αποθηκευεται/μετραει για τη σωστη "βραδια".
+  const nextDay=(()=>{const d=new Date(today+"T12:00:00");d.setDate(d.getDate()+1);return d.toISOString().slice(0,10);})();
+  const todayMatches=[
+    // σημερινα ματς ΕΚΤΟΣ απο τα ξημερωματιστικα (αυτα ανηκουν στη χθεσινη βραδια)
+    ...(BY_DATE[today]||[]).filter(m=>{
+      const t=matchTimes[m.id]; if(!t) return true; // χωρις ωρα → μενει στη μερα του
+      const h=Number(t.split(":")[0]); return !(h<8); // <08:00 → αφαιρειται (ανηκει στη χθεσινη βραδια)
+    }).map(m=>({...resolve(m), voteDate:today})),
+    // + τα ξημερωματιστικα της επομενης μερας (ανηκουν στη ΣΗΜΕΡΙΝΗ βραδια)
+    ...(BY_DATE[nextDay]||[]).filter(m=>{
+      const t=matchTimes[m.id]; if(!t) return false;
+      const h=Number(t.split(":")[0]); return !isNaN(h)&&h<8;
+    }).map(m=>({...resolve(m), voteDate:today, isNextDayEarly:true})),
+  ];
 
   // Confetti when my number of correct predictions increases
   useEffect(()=>{
@@ -643,11 +672,12 @@ export default function App(){
   function renderPredict(){
     const dp=myPreds[today]||{};
     const resCount=todayMatches.filter(m=>m.result).length;
+    const votedCount=todayMatches.filter(m=>dp[m.id]).length;
     const grouped={};todayMatches.forEach(m=>{ (grouped[m.phase]??=[]).push(m); });
     if(!todayMatches.length) return(<div className="no-m"><div className="ico">🏟️</div><h3>ΚΑΝΕΝΑ ΜΑΤΣ ΣΗΜΕΡΑ</h3><p>Τα ματς ξεκινουν 11 Ιουνιου 2026.<br/>Δες την καταταξη ή το bracket στο μεταξυ!</p></div>);
     return(<>
       <div className="scorepanel"><div className="sp-row">
-        <div className="sp-l"><h3>{caps(fmtLong(today))}</h3><p>{todayMatches.length} ματς · {Object.keys(dp).length} ψηφισεις · {resCount} αποτελεσματα</p></div>
+        <div className="sp-l"><h3>{caps(fmtLong(today))}</h3><p>{todayMatches.length} ματς · {votedCount} ψηφισεις · {resCount} αποτελεσματα</p></div>
         <div className="sp-r"><div className="sp-num">{myDayPts}</div><div className="sp-lbl">ΠΟΝΤΟΙ</div></div>
       </div></div>
       <div className="lockbar">🔒 Η ψηφοφορια κλειδωνει 15' πριν το ματς · μετα φανερωνονται οι ψηφοι ολων</div>
@@ -655,26 +685,27 @@ export default function App(){
         <div key={phase}>
           <div className="psep"><span className="plabel">{caps(PHASE_LABEL[phase])}{ms[0]?.group?` · ΟΜ. ${ms[0].group}`:""}</span></div>
           {ms.map(m=>{
+            const mDate=m.date; // real calendar date of the match
             const pick=dp[m.id],res=m.result;
             const won=pick&&res&&pick===res,lost=pick&&res&&pick!==res;
-            const timeLocked=isLocked(m.id,today);
+            const timeLocked=isLocked(m.id,mDate);
             const locked=!!pick||timeLocked; // can't vote if already voted OR time passed
             const kickoff=matchTimes[m.id];
             const crowd=timeLocked?crowdVotes(m.id,today,predictions):null;
-            // who voted what (revealed only after lock)
             const revealed=timeLocked;
             return(<div key={m.id} className={`mc${won?" won":lost?" lost":pick?" voted":""}`}>
               <div className="mc-head">
                 <div className="mc-side"><span className="mc-bigflag">{F(m.home)}</span><span className="mc-team">{m.home}</span></div>
                 <div className="mc-mid">
                   <span className="mc-vs">VS</span>
-                  {kickoff&&<span className="mc-time">{timeLocked?"🔒 ":"⏰ "}{kickoff}</span>}
+                  {kickoff&&<span className="mc-time">{timeLocked?"🔒 ":"⏰ "}{kickoff}{m.isNextDayEarly?" ⁺¹":""}</span>}
                   {res?<span className={`mc-result-pill ${won?"win":"loss"}`}>{won?"✓ +1":`Ληξη ${res}`}</span>:pick?<span className="mc-result-pill pend">⏳</span>:null}
                 </div>
                 <div className="mc-side"><span className="mc-bigflag">{F(m.away)}</span><span className="mc-team">{m.away}</span></div>
               </div>
+              {m.isNextDayEarly&&<div className="mc-nextday">🌙 Ξημερωματα {fmtShort(mDate)} — ανηκει στη σημερινη βραδια</div>}
               <div className="mc-votes">
-                {["1","X","2"].map(v=>(<button key={v} className={`bigv${pick===v?` s${v}`:""}${locked?" lk":""}`} onClick={()=>!locked&&vote(m.id,v)}>
+                {["1","X","2"].map(v=>(<button key={v} className={`bigv${pick===v?` s${v}`:""}${locked?" lk":""}`} onClick={()=>!locked&&vote(m.id,v,today,mDate)}>
                   {pick===v&&<span className="bigv-lock">🔒</span>}
                   <span className="bigv-k">{v}</span>
                   <span className="bigv-sub">{v==="X"?"ΙΣΟΠΑΛΙΑ":v==="1"?"ΓΗΠΕΔΟΥΧΟΣ":"ΦΙΛΟΞΕΝ."}</span>
@@ -692,7 +723,7 @@ export default function App(){
 
   // Shows everyone's vote for a match (after it locks)
   function MatchReveal({matchId,matchDate}){
-    const rows=board.map(u=>({name:u.username,pick:predictions[u.id]?.[matchDate]?.[matchId]})).filter(r=>r.pick);
+    const rows=board.map(u=>({name:u.username,pick:findPick(predictions[u.id],matchId)})).filter(r=>r.pick);
     if(rows.length===0) return null;
     return(
       <div className="reveal">
@@ -829,10 +860,24 @@ export default function App(){
             {tMs.length===0&&<div style={{color:"var(--muted)",fontSize:".8rem"}}>Δεν υπαρχουν ματς.</div>}
             {tMs.map(m=>{
               const cur = (m.id in timeDraft) ? timeDraft[m.id] : (matchTimes[m.id]||"");
-              const isNextDay = cur && Number(cur.split(":")[0])<8;
+              const curH = cur ? cur.split(":")[0] : "";
+              const curM = cur ? cur.split(":")[1] : "";
+              const isNextDay = cur && Number(curH)<8;
+              const setHM=(h,mm)=>{ if(h===""&&mm===""){ setTimeDraft(d=>({...d,[m.id]:""})); return; } const H=(h===""?(curH||"00"):h).padStart(2,"0"); const M=(mm===""?(curM||"00"):mm).padStart(2,"0"); setTimeDraft(d=>({...d,[m.id]:`${H}:${M}`})); };
               return(<div key={m.id} className="am">
                 <div className="am-l"><div className="am-team">{F(m.home)} {m.home} vs {m.away} {F(m.away)}</div><div className="am-sub">{m.label||`Ομ. ${m.group}`}{isNextDay&&<span style={{color:"var(--gold3)"}}> · ξημερωματα {nextDayLabel}</span>}</div></div>
-                <input className="time-inp" type="time" value={cur} onChange={e=>setTimeDraft(d=>({...d,[m.id]:e.target.value}))}/>
+                <div className="time-pick">
+                  <select className="time-sel" value={curH} onChange={e=>setHM(e.target.value,curM||"00")}>
+                    <option value="">--</option>
+                    {Array.from({length:24},(_,i)=>String(i).padStart(2,"0")).map(h=><option key={h} value={h}>{h}</option>)}
+                  </select>
+                  <span className="time-colon">:</span>
+                  <select className="time-sel" value={curM} onChange={e=>setHM(curH||"00",e.target.value)}>
+                    <option value="">--</option>
+                    {["00","15","30","45"].map(mm=><option key={mm} value={mm}>{mm}</option>)}
+                  </select>
+                  {cur&&<button className="time-clear" onClick={()=>setTimeDraft(d=>({...d,[m.id]:""}))} title="Καθαρισμος">✕</button>}
+                </div>
               </div>);
             })}
             {tMs.length>0&&<button className="bsm b-gold" style={{marginTop:".8rem",width:"100%"}} onClick={saveMatchTimes}>💾 Αποθηκευση ωρων</button>}
@@ -1145,6 +1190,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Inter'
 .bigv-pct{font-family:'Rajdhani',sans-serif;font-size:.62rem;font-weight:700;color:var(--muted);margin-top:.15rem;letter-spacing:.5px;}
 .bigv.s1 .bigv-pct,.bigv.sX .bigv-pct,.bigv.s2 .bigv-pct{color:inherit;opacity:.85;}
 .mc-missed{font-family:'Rajdhani',sans-serif;font-size:.7rem;font-weight:600;color:var(--red);text-align:center;padding:0 .7rem .5rem;letter-spacing:.3px;}
+.mc-nextday{font-family:'Rajdhani',sans-serif;font-size:.72rem;font-weight:700;color:var(--gold3);text-align:center;padding:0 .7rem .55rem;letter-spacing:.3px;background:linear-gradient(180deg,rgba(244,203,85,0.06),transparent);}
 .reveal{border-top:1px solid rgba(255,255,255,0.06);margin:0 .7rem;padding:.6rem 0 .7rem;}
 .reveal-h{font-family:'Rajdhani',sans-serif;font-size:.7rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:.45rem;}
 .reveal-list{display:flex;flex-wrap:wrap;gap:.3rem;}
@@ -1155,6 +1201,12 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Inter'
 .reveal-chip.rv2{background:rgba(255,100,100,0.1);color:var(--red);border-color:rgba(255,100,100,0.2);}
 .time-inp{background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.14);border-radius:8px;color:var(--text);font-family:'Orbitron',sans-serif;font-size:.85rem;font-weight:600;padding:.35rem .5rem;outline:none;transition:all .15s;color-scheme:dark;}
 .time-inp:focus{border-color:var(--gold3);box-shadow:0 0 0 3px rgba(244,203,85,0.1);}
+.time-pick{display:flex;align-items:center;gap:.2rem;flex-shrink:0;}
+.time-sel{background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.14);border-radius:8px;color:var(--text);font-family:'Orbitron',sans-serif;font-size:.95rem;font-weight:700;padding:.4rem .35rem;outline:none;transition:all .15s;color-scheme:dark;cursor:pointer;text-align:center;}
+.time-sel:focus{border-color:var(--gold3);box-shadow:0 0 0 3px rgba(244,203,85,0.1);}
+.time-colon{font-family:'Orbitron',sans-serif;font-weight:800;color:var(--gold2);font-size:1rem;}
+.time-clear{background:rgba(255,100,100,0.1);border:1px solid rgba(255,100,100,0.2);color:var(--red);border-radius:6px;width:26px;height:26px;cursor:pointer;font-size:.7rem;margin-left:.2rem;transition:all .12s;}
+.time-clear:hover{background:rgba(255,100,100,0.2);}
 .day-select{flex:1;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.14);border-radius:8px;color:var(--text);font-family:'Rajdhani',sans-serif;font-size:.82rem;font-weight:600;padding:.4rem .5rem;outline:none;transition:all .15s;color-scheme:dark;cursor:pointer;}
 .day-select:focus{border-color:var(--gold3);}
 .streak-card{display:flex;align-items:center;gap:.9rem;background:linear-gradient(135deg,rgba(255,140,40,0.12),rgba(244,203,85,0.08));border:1px solid rgba(255,140,40,0.25);border-radius:var(--r2);padding:1rem 1.2rem;margin-bottom:1rem;box-shadow:0 8px 24px rgba(0,0,0,0.4);}
