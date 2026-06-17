@@ -496,13 +496,21 @@ export default function App(){
   async function vote(matchId,pick,voteDate,matchDate){
     const vd=voteDate||today;
     const md=matchDate||today;
-    if(predictions[me.id]?.[vd]?.[matchId])return;
+    // Εχει ηδη ψηφισει αυτο το ματς (σε οποιαδηποτε ημερομηνια); μην ξαναψηφισεις.
+    if(findPick(predictions[me.id],matchId)) return;
     if(isLocked(matchId,md)){ showToast("Η ψηφοφορια εκλεισε","err"); return; }
     // optimistic
     setPredictions(prev=>{const n={...prev};n[me.id]??={};n[me.id][vd]??={};n[me.id][vd]={...n[me.id][vd],[matchId]:pick};return n;});
     showToast("Ψηφος κλειδωθηκε");
     const {error}=await supabase.from("predictions").insert({user_id:me.id,match_id:matchId,match_date:vd,pick});
-    if(error){ showToast("Σφαλμα — δοκιμασε ξανα","err"); loadAll(); }
+    if(error){
+      if(error.code==="23505"||String(error.message||"").includes("409")||String(error.code)==="409"){
+        // ηδη υπαρχει ψηφος γι' αυτο το ματς — απλα φορτωσε ξανα, χωρις σφαλμα
+        await loadAll();
+      }else{
+        showToast("Σφαλμα — δοκιμασε ξανα","err"); loadAll();
+      }
+    }
   }
 
   // ── ADMIN: results ──
@@ -677,7 +685,7 @@ export default function App(){
   function renderPredict(){
     const dp=myPreds[today]||{};
     const resCount=todayMatches.filter(m=>m.result).length;
-    const votedCount=todayMatches.filter(m=>dp[m.id]).length;
+    const votedCount=todayMatches.filter(m=>findPick(myPreds,m.id)).length;
     const grouped={};todayMatches.forEach(m=>{ (grouped[m.phase]??=[]).push(m); });
     if(!todayMatches.length) return(<div className="no-m"><div className="ico">🏟️</div><h3>ΚΑΝΕΝΑ ΜΑΤΣ ΣΗΜΕΡΑ</h3><p>Τα ματς ξεκινουν 11 Ιουνιου 2026.<br/>Δες την καταταξη ή το bracket στο μεταξυ!</p></div>);
     return(<>
@@ -691,7 +699,7 @@ export default function App(){
           <div className="psep"><span className="plabel">{caps(PHASE_LABEL[phase])}{ms[0]?.group?` · ΟΜ. ${ms[0].group}`:""}</span></div>
           {ms.map(m=>{
             const mDate=m.date; // η βραδια στην οποια ανηκει το ματς
-            const pick=dp[m.id],res=m.result;
+            const pick=findPick(myPreds,m.id),res=m.result;
             const won=pick&&res&&pick===res,lost=pick&&res&&pick!==res;
             const timeLocked=isLocked(m.id,mDate);
             const locked=!!pick||timeLocked; // can't vote if already voted OR time passed
