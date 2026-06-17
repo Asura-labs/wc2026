@@ -406,9 +406,22 @@ export default function App(){
   // ── LOAD ALL DATA ──
   const loadAll = useCallback(async()=>{
     try{
-      const [{data:us},{data:preds},{data:gd}] = await Promise.all([
+      // Φορτωνουμε ΟΛΕΣ τις ψηφους με σελιδοποιηση (το Supabase επιστρεφει max 1000/φορα).
+      async function fetchAllPredictions(){
+        const all=[]; const size=1000; let from=0;
+        for(let i=0;i<50;i++){ // ασφαλεια: μεχρι 50.000 ψηφους
+          const {data,error}=await supabase.from("predictions").select("*").range(from,from+size-1);
+          if(error){ console.error("preds page error",error); break; }
+          if(!data||data.length===0) break;
+          all.push(...data);
+          if(data.length<size) break;
+          from+=size;
+        }
+        return all;
+      }
+      const [{data:us},preds,{data:gd}] = await Promise.all([
         supabase.from("users").select("*"),
-        supabase.from("predictions").select("*"),
+        fetchAllPredictions(),
         supabase.from("game_data").select("*"),
       ]);
       setUsers(us||[]);
