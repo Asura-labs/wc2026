@@ -1061,6 +1061,16 @@ export default function App(){
         </header>
       )}
       {me&&(
+        <nav className="bottomnav">
+          {[{k:"predict",l:"Ψηφισεις",i:"⚽"},{k:"bracket",l:"Bracket",i:"🏆"},{k:"leaderboard",l:"Καταταξη",i:"📊"},{k:"history",l:"Ιστορικο",i:"📋"},...(me.is_admin?[{k:"admin",l:"Admin",i:"⚙️"}]:[])].map(n=>(
+            <button key={n.k} className={`bn${view===n.k?" on":""}`} onClick={()=>setView(n.k)}>
+              <span className="bn-i">{n.i}</span>
+              <span className="bn-l">{n.l}</span>
+            </button>
+          ))}
+        </nav>
+      )}
+      {me&&(
         <main className="main">
           {view==="predict"&&(<>
             <div className="ptop"><div className="ptitle">ΨΗΦΙΣΕΙΣ <em>ΣΗΜΕΡΑ</em></div><div className="psub">{fmtLong(today)}</div></div>
@@ -1379,4 +1389,34 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Inter'
 .badge{font-family:'Rajdhani',sans-serif;font-size:.8rem;font-weight:700;letter-spacing:.3px;color:var(--gold2);background:var(--golddim);border:1px solid var(--goldbord);border-radius:20px;padding:.28rem .7rem;white-space:nowrap;}
 .row-badges{display:inline-flex;gap:.1rem;margin-left:.4rem;}
 .row-badge{font-size:.78rem;cursor:default;}
+/* ── BOTTOM NAV (mobile) ── */
+.bottomnav{display:none;}
+.bn{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;background:none;border:none;cursor:pointer;padding:.35rem 0 .25rem;color:var(--muted);transition:color .15s;-webkit-tap-highlight-color:transparent;}
+.bn-i{font-size:1.35rem;line-height:1;filter:grayscale(.4) opacity(.7);transition:filter .15s,transform .15s;}
+.bn-l{font-family:'Rajdhani',sans-serif;font-size:.6rem;font-weight:700;letter-spacing:.5px;text-transform:uppercase;}
+.bn.on{color:var(--gold2);}
+.bn.on .bn-i{filter:none;transform:translateY(-1px) scale(1.08);}
+.bn.on .bn-l{color:var(--gold2);}
+
+/* ── MOBILE LAYOUT ── */
+@media (max-width:640px){
+  .hdr{height:52px;padding:0 .8rem;}
+  .hdr .nav{display:none;}              /* το πανω μενου κρυβεται */
+  .logo{font-size:1rem;letter-spacing:1.5px;}
+  .pts-chip{font-size:.78rem;padding:.22rem .6rem;}
+  .lbtn{font-size:.72rem;padding:.22rem .5rem;}
+  .main{padding:.8rem .7rem calc(72px + env(safe-area-inset-bottom,0px));} /* χωρος για το κατω μενου */
+  .bottomnav{
+    display:flex;position:fixed;left:0;right:0;bottom:0;z-index:300;
+    padding:.2rem .3rem calc(.2rem + env(safe-area-inset-bottom,0px));
+    background:rgba(9,10,13,0.96);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);
+    border-top:1px solid var(--goldbord);box-shadow:0 -8px 30px rgba(0,0,0,0.55);
+  }
+  .toast{bottom:calc(72px + env(safe-area-inset-bottom,0px));}  /* πανω απο το κατω μενου */
+}
+@media (max-width:380px){
+  .bn-l{font-size:.54rem;letter-spacing:.2px;}
+  .bn-i{font-size:1.25rem;}
+  .logo{font-size:.92rem;}
+}
 `;
