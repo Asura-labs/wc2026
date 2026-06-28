@@ -137,7 +137,19 @@ const BY_DATE = SCHEDULE.reduce((a,m)=>{ (a[m.date]??=[]).push(m); return a; },{
 const SCHED_BY_ID = SCHEDULE.reduce((a,m)=>{ a[m.id]=m; return a; },{});
 const addDays=(dateStr,n)=>{const d=new Date(dateStr+"T12:00:00");d.setDate(d.getDate()+n);return d.toISOString().slice(0,10);};
 const ALL_DATES = Object.keys(BY_DATE).sort();
+const ALL_TEAMS = [...new Set(SCHEDULE.filter(m=>m.phase==="group").flatMap(m=>[m.home,m.away]))].sort();
 const PHASE_LABEL = {group:"Ομιλοι",round32:"Round of 32",round16:"Round of 16",quarter:"Quarter Final",semi:"Semi Final",bronze:"3η Θεση",final:"Τελικος"};
+// Meta για το hero banner καθε φασης (εμφανιση/ενεργεια)
+const PHASE_META = {
+  group:   {eyebrow:"ΦΑΣΗ ΟΜΙΛΩΝ",   title:"ΟΜΙΛΟΙ",          tag:"",          icon:"⚽"},
+  round32: {eyebrow:"ΝΟΚ-ΑΟΥΤ",       title:"ΦΑΣΗ ΤΩΝ 32",     tag:"ΝΙΚΗ Ή ΕΞΟΔΟΣ", icon:"🔥"},
+  round16: {eyebrow:"ΝΟΚ-ΑΟΥΤ",       title:"ΦΑΣΗ ΤΩΝ 16",     tag:"ΝΙΚΗ Ή ΕΞΟΔΟΣ", icon:"🔥"},
+  quarter: {eyebrow:"ΠΡΟΗΜΙΤΕΛΙΚΑ",   title:"ΟΙ 8 ΚΑΛΥΤΕΡΟΙ", tag:"ΔΡΟΜΟΣ ΓΙΑ ΤΟΝ ΤΕΛΙΚΟ", icon:"⭐"},
+  semi:    {eyebrow:"ΗΜΙΤΕΛΙΚΑ",       title:"ΟΙ 4 ΚΑΛΥΤΕΡΟΙ", tag:"ΕΝΑ ΒΗΜΑ ΠΡΙΝ ΤΟΝ ΤΕΛΙΚΟ", icon:"🏅"},
+  bronze:  {eyebrow:"ΜΙΚΡΟΣ ΤΕΛΙΚΟΣ", title:"3η ΘΕΣΗ",         tag:"", icon:"🥉"},
+  final:   {eyebrow:"Ο ΜΕΓΑΛΟΣ ΤΕΛΙΚΟΣ", title:"ΤΕΛΙΚΟΣ",      tag:"ΠΑΓΚΟΣΜΙΟΣ ΠΡΩΤΑΘΛΗΤΗΣ", icon:"🏆"},
+};
+const isKnockoutPhase=p=>p&&p!=="group";
 
 // Find a user's pick for a match, regardless of which "vote day" it was stored under.
 // (after-midnight matches are stored under the previous day's matchday-night)
@@ -219,6 +231,19 @@ function teamsMatch(a,b){
   if(!x||!y)return false;
   return x===y || x.includes(y) || y.includes(x);
 }
+// Αναγνωριση φασης απο το "round" string του openfootball
+function phaseOfRound(r){
+  const s=(r||"").toLowerCase();
+  if(/third|3rd|bronze/.test(s)) return "bronze";
+  if(/round of 32|1\/16|last 32/.test(s)) return "round32";
+  if(/round of 16|1\/8|last 16/.test(s)) return "round16";
+  if(/quarter|1\/4/.test(s)) return "quarter";
+  if(/semi|1\/2/.test(s)) return "semi";
+  if(/final/.test(s)) return "final";
+  return null;
+}
+const isRealTeam=t=>t && !/winner|loser|runner|tbd|\?|group|best|place|3rd|third/i.test(t);
+
 async function fetchFromAPI(){
   // πολλαπλα mirrors για σιγουρια
   const urls=[
@@ -238,36 +263,46 @@ async function fetchFromAPI(){
 
   const matches=data.matches||[];
   const newTeams={},newResults={};
-
-  function findSched(m){
-    const d=(m.date||"").slice(0,10);
-    const t1=m.team1?.name||m.team1, t2=m.team2?.name||m.team2;
-    // ταιριασμα με ημερομηνια + ομαδες, αλλιως μονο ομαδες
-    return SCHEDULE.find(s=>s.date===d && teamsMatch(s.home,t1) && teamsMatch(s.away,t2))
-        || SCHEDULE.find(s=>teamsMatch(s.home,t1) && teamsMatch(s.away,t2));
-  }
+  const nm=m=>({d:(m.date||"").slice(0,10), t1:m.team1?.name||m.team1, t2:m.team2?.name||m.team2, round:m.round||m.stage||""});
   function getScore(m){
-    // openfootball: score.ft = [home, away]  ή  score1/score2
     if(m.score?.ft && m.score.ft.length===2) return [m.score.ft[0],m.score.ft[1]];
     if(m.score1!=null && m.score2!=null)     return [m.score1,m.score2];
     return null;
   }
 
+  // ── GROUP STAGE: ταιριασμα με ονοματα ομαδων ──
   matches.forEach(m=>{
-    const f=findSched(m);
-    if(!f)return;
-    const t1=m.team1?.name||m.team1, t2=m.team2?.name||m.team2;
-    // knockout teams (οχι TBD)
-    if(f.phase!=="group" && t1 && t2 && !/winner|loser|tbd|\?/i.test(t1+t2)){
-      newTeams[f.id]={home:t1,away:t2};
-    }
-    // αποτελεσμα
+    const {d,t1,t2}=nm(m);
+    const f=SCHEDULE.find(s=>s.phase==="group" && s.date===d && teamsMatch(s.home,t1) && teamsMatch(s.away,t2))
+         || SCHEDULE.find(s=>s.phase==="group" && teamsMatch(s.home,t1) && teamsMatch(s.away,t2));
+    if(!f) return;
     const sc=getScore(m);
-    if(sc){
-      const [hg,ag]=sc;
-      if(hg!=null && ag!=null) newResults[f.id]=hg>ag?"1":hg<ag?"2":"X";
-    }
+    if(sc){ const [hg,ag]=sc; if(hg!=null&&ag!=null) newResults[f.id]=hg>ag?"1":hg<ag?"2":"X"; }
   });
+
+  // ── KNOCKOUT: αντιστοιχιση ανα φαση + σειρα ημερομηνιας ──
+  const ourSlots={round32:[],round16:[],quarter:[],semi:[],bronze:[],final:[]};
+  SCHEDULE.forEach(s=>{ if(ourSlots[s.phase]) ourSlots[s.phase].push(s); });
+  // ταξινομηση slots ανα id (ηδη χρονολογικα)
+  Object.values(ourSlots).forEach(arr=>arr.sort((a,b)=>a.id.localeCompare(b.id)));
+
+  const apiByPhase={round32:[],round16:[],quarter:[],semi:[],bronze:[],final:[]};
+  matches.forEach(m=>{
+    const info=nm(m); const ph=phaseOfRound(info.round);
+    if(ph && apiByPhase[ph]) apiByPhase[ph].push({...info, sc:getScore(m)});
+  });
+  Object.values(apiByPhase).forEach(arr=>arr.sort((a,b)=>(a.d||"").localeCompare(b.d||"")));
+
+  // ζευγαρωμα slot ↔ api match ανα φαση
+  Object.keys(ourSlots).forEach(ph=>{
+    ourSlots[ph].forEach((slot,i)=>{
+      const am=apiByPhase[ph][i];
+      if(!am) return;
+      if(isRealTeam(am.t1) && isRealTeam(am.t2)) newTeams[slot.id]={home:am.t1,away:am.t2};
+      if(am.sc){ const [hg,ag]=am.sc; if(hg!=null&&ag!=null) newResults[slot.id]=hg>ag?"1":hg<ag?"2":"X"; }
+    });
+  });
+
   return{newTeams,newResults};
 }
 
@@ -643,6 +678,16 @@ export default function App(){
     await supabase.from("game_data").upsert({key:"matchTimes",value:merged,updated_at:new Date().toISOString()});
     showToast("Ωρες αποθηκευτηκαν");
   }
+  // ── ADMIN: χειροκινητη ρυθμιση knockout ζευγαριου (fallback αν αργει το API) ──
+  async function saveKnockoutTeam(matchId, side, team){
+    const merged={...apiTeams};
+    const cur=merged[matchId]||{};
+    merged[matchId]={...cur,[side]:team};
+    // αν αδειασουν και τα δυο, καθαρισε
+    if(!merged[matchId].home && !merged[matchId].away) delete merged[matchId];
+    setApiTeams(merged);
+    await supabase.from("game_data").upsert({key:"apiTeams",value:merged,updated_at:new Date().toISOString()});
+  }
   async function doFetch(){
     setFetching(true);
     try{
@@ -701,7 +746,22 @@ export default function App(){
     const votedCount=todayMatches.filter(m=>findPick(myPreds,m.id)).length;
     const grouped={};todayMatches.forEach(m=>{ (grouped[m.phase]??=[]).push(m); });
     if(!todayMatches.length) return(<div className="no-m"><div className="ico">🏟️</div><h3>ΚΑΝΕΝΑ ΜΑΤΣ ΣΗΜΕΡΑ</h3><p>Τα ματς ξεκινουν 11 Ιουνιου 2026.<br/>Δες την καταταξη ή το bracket στο μεταξυ!</p></div>);
+    // κυριαρχη φαση της βραδιας (για το hero banner)
+    const domPhase=todayMatches[0]?.phase||"group";
+    const pm=PHASE_META[domPhase]||PHASE_META.group;
+    const ko=isKnockoutPhase(domPhase);
     return(<>
+      {ko&&(
+        <div className={`phase-hero ph-${domPhase}`}>
+          <div className="phase-hero-glow"/>
+          <div className="phase-hero-ico">{pm.icon}</div>
+          <div className="phase-hero-txt">
+            <div className="phase-hero-eye">{pm.eyebrow}</div>
+            <div className="phase-hero-title">{pm.title}</div>
+            {pm.tag&&<div className="phase-hero-tag">{pm.tag}</div>}
+          </div>
+        </div>
+      )}
       <div className="scorepanel"><div className="sp-row">
         <div className="sp-l"><h3>{caps(fmtLong(today))}</h3><p>{todayMatches.length} ματς · {votedCount} ψηφισεις · {resCount} αποτελεσματα</p></div>
         <div className="sp-r"><div className="sp-num">{myDayPts}</div><div className="sp-lbl">ΠΟΝΤΟΙ</div></div>
@@ -709,7 +769,7 @@ export default function App(){
       <div className="lockbar">🔒 Η ψηφοφορια κλειδωνει 15' πριν το ματς · μετα φανερωνονται οι ψηφοι ολων</div>
       {Object.entries(grouped).map(([phase,ms])=>(
         <div key={phase}>
-          <div className="psep"><span className="plabel">{caps(PHASE_LABEL[phase])}{ms[0]?.group?` · ΟΜ. ${ms[0].group}`:""}</span></div>
+          <div className="psep"><span className={`plabel${isKnockoutPhase(phase)?" plabel-ko":""}`}>{caps(PHASE_LABEL[phase])}{ms[0]?.group?` · ΟΜ. ${ms[0].group}`:""}</span></div>
           {ms.map(m=>{
             const mDate=m.date; // η βραδια στην οποια ανηκει το ματς
             const pick=findPick(myPreds,m.id),res=m.result;
@@ -719,7 +779,9 @@ export default function App(){
             const kickoff=kickoffTime(m.id);
             const crowd=timeLocked?crowdVotes(m.id,today,predictions):null;
             const revealed=timeLocked;
-            return(<div key={m.id} className={`mc${won?" won":lost?" lost":pick?" voted":""}`}>
+            const koCard=isKnockoutPhase(m.phase);
+            return(<div key={m.id} className={`mc${koCard?" mc-ko":""}${won?" won":lost?" lost":pick?" voted":""}`}>
+              {koCard&&<div className="mc-ko-tag">{m.label||"ΝΟΚ-ΑΟΥΤ"}</div>}
               <div className="mc-head">
                 <div className="mc-side"><span className="mc-bigflag">{F(m.home)}</span><span className="mc-team">{m.home}</span></div>
                 <div className="mc-mid">
@@ -863,7 +925,7 @@ export default function App(){
     const prevMs=(BY_DATE[prevDate]||[]).map(resolve);
     return(<>
       <div className="ptop"><div className="ptitle"><em>ADMIN</em></div><div className="psub">Διαχειριση αποτελεσματων & παικτων</div></div>
-      <div className="atabs">{[["results","Αποτελεσματα"],["times","Ωρες"],["auto","API"],["preview","Preview"],["users","Χρηστες"]].map(([k,l])=>(<button key={k} className={`atab${adminTab===k?" on":""}`} onClick={()=>setAdminTab(k)}>{l}</button>))}</div>
+      <div className="atabs">{[["results","Αποτελεσματα"],["ko","Knockout"],["times","Ωρες"],["auto","API"],["preview","Preview"],["users","Χρηστες"]].map(([k,l])=>(<button key={k} className={`atab${adminTab===k?" on":""}`} onClick={()=>setAdminTab(k)}>{l}</button>))}</div>
       {adminTab==="results"&&(<>
         <div className="info-bar">1 = νικη γηπεδουχου · X = ισοπαλια · 2 = νικη φιλοξενουμενου — Πατα ξανα για αφαιρεση.</div>
         <div className="dstrip">{ALL_DATES.map(d=><button key={d} className={`dtab${d===adminDate?" on":""}`} onClick={()=>setAdminDate(d)}>{fmtShort(d)}</button>)}</div>
@@ -875,6 +937,25 @@ export default function App(){
             {m.result&&<span style={{fontSize:".7rem",color:"var(--green)"}}>✓</span>}
           </div>))}
         </div>
+      </>)}
+      {adminTab==="ko"&&(<>
+        <div className="info-bar">🏆 <b>Knockout ζευγαρια:</b> Συνηθως ερχονται <b>αυτοματα</b> απο το API (καρτελα «API» → Ανακτηση). Αν αργησει, βαλ' τα <b>χειροκινητα</b> εδω. Διαλεξε ομαδες απο τις λιστες. Τα αποτελεσματα μπαινουν στην καρτελα «Αποτελεσματα».</div>
+        <datalist id="teamlist">{ALL_TEAMS.map(t=><option key={t} value={t}/>)}</datalist>
+        {[["round32","Φαση των 32"],["round16","Φαση των 16"],["quarter","Προημιτελικα"],["semi","Ημιτελικα"],["bronze","Μικρος Τελικος"],["final","Τελικος"]].map(([ph,lbl])=>{
+          const slots=SCHEDULE.filter(s=>s.phase===ph);
+          if(!slots.length) return null;
+          return(<div key={ph} className="asec">
+            <div className="asec-h">{lbl}</div>
+            {slots.map(s=>{const ov=apiTeams[s.id]||{};
+              return(<div key={s.id} className="ko-row">
+                <span className="ko-lbl">{s.label||s.id}</span>
+                <input list="teamlist" className="ko-inp" placeholder="Γηπεδουχος" defaultValue={ov.home||""} onBlur={e=>{const v=e.target.value.trim();if(v!==(ov.home||""))saveKnockoutTeam(s.id,"home",v);}}/>
+                <span className="ko-vs">–</span>
+                <input list="teamlist" className="ko-inp" placeholder="Φιλοξεν." defaultValue={ov.away||""} onBlur={e=>{const v=e.target.value.trim();if(v!==(ov.away||""))saveKnockoutTeam(s.id,"away",v);}}/>
+              </div>);
+            })}
+          </div>);
+        })}
       </>)}
       {adminTab==="times"&&(()=>{
         const tMs=(BY_DATE[adminTimeDate]||[]).map(resolve);
@@ -1231,6 +1312,32 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Inter'
 .time-inp{background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.14);border-radius:8px;color:var(--text);font-family:'Orbitron',sans-serif;font-size:.85rem;font-weight:600;padding:.35rem .5rem;outline:none;transition:all .15s;color-scheme:dark;}
 .time-inp:focus{border-color:var(--gold3);box-shadow:0 0 0 3px rgba(244,203,85,0.1);}
 .time-pick{display:flex;align-items:center;gap:.2rem;flex-shrink:0;}
+.ko-row{display:flex;align-items:center;gap:.4rem;padding:.4rem 0;border-bottom:1px solid rgba(255,255,255,0.04);}
+.ko-row:last-child{border-bottom:none;}
+.ko-lbl{font-family:'Rajdhani',sans-serif;font-size:.7rem;font-weight:700;color:var(--gold3);width:74px;flex-shrink:0;letter-spacing:.3px;}
+.ko-inp{flex:1;min-width:0;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.12);border-radius:7px;color:var(--text);font-family:'Rajdhani',sans-serif;font-size:.82rem;font-weight:600;padding:.4rem .5rem;outline:none;transition:all .15s;}
+.ko-inp:focus{border-color:var(--gold3);box-shadow:0 0 0 3px rgba(244,203,85,0.1);}
+.ko-vs{font-family:'Orbitron',sans-serif;font-weight:700;color:var(--muted);font-size:.75rem;flex-shrink:0;}
+/* ── KNOCKOUT-ERA DESIGN ── */
+.phase-hero{position:relative;overflow:hidden;display:flex;align-items:center;gap:1rem;padding:1.1rem 1.3rem;margin-bottom:.9rem;border-radius:var(--r2);background:linear-gradient(120deg,#2a1c06 0%,#1a1205 45%,#0f0c08 100%);border:1px solid rgba(244,203,85,0.4);box-shadow:0 10px 32px rgba(0,0,0,0.5),0 0 40px rgba(244,203,85,0.12),inset 0 1px 0 rgba(255,255,255,0.08);}
+.phase-hero-glow{position:absolute;top:-60%;right:-10%;width:60%;height:200%;background:radial-gradient(ellipse at center,rgba(244,203,85,0.25),transparent 70%);pointer-events:none;animation:heroglow 4s ease-in-out infinite;}
+@keyframes heroglow{0%,100%{opacity:.6;transform:scale(1);}50%{opacity:1;transform:scale(1.1);}}
+.phase-hero-ico{font-size:2.8rem;line-height:1;flex-shrink:0;filter:drop-shadow(0 0 16px rgba(244,203,85,0.5));animation:heroFloat 3s ease-in-out infinite;z-index:1;}
+@keyframes heroFloat{0%,100%{transform:translateY(0) rotate(-3deg);}50%{transform:translateY(-5px) rotate(3deg);}}
+.phase-hero-txt{position:relative;z-index:1;}
+.phase-hero-eye{font-family:'Rajdhani',sans-serif;font-size:.7rem;font-weight:700;letter-spacing:3px;color:var(--gold3);text-transform:uppercase;}
+.phase-hero-title{font-family:'Orbitron',sans-serif;font-size:1.55rem;font-weight:800;letter-spacing:1px;color:var(--gold2);text-shadow:0 0 24px rgba(244,203,85,0.5);line-height:1.05;margin:.1rem 0;}
+.phase-hero-tag{display:inline-block;font-family:'Rajdhani',sans-serif;font-size:.66rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#0f0c08;background:linear-gradient(135deg,var(--gold2),var(--gold3));padding:.16rem .6rem;border-radius:20px;margin-top:.2rem;}
+.ph-final .phase-hero-title,.ph-semi .phase-hero-title{font-size:1.75rem;}
+.ph-final{background:linear-gradient(120deg,#3a2408 0%,#1f1606 50%,#0f0c08 100%);border-color:rgba(244,203,85,0.6);}
+.plabel-ko{color:var(--gold2);background:var(--golddim);padding:.18rem .7rem;border-radius:20px;border:1px solid var(--goldbord);}
+.mc-ko{border-color:rgba(244,203,85,0.3);background:linear-gradient(150deg,#241d10 0%,#1a160e 45%,#15120c 100%);}
+.mc-ko-tag{position:absolute;top:0;left:50%;transform:translateX(-50%);font-family:'Rajdhani',sans-serif;font-size:.6rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#0f0c08;background:linear-gradient(135deg,var(--gold2),var(--gold3));padding:.12rem .8rem;border-radius:0 0 8px 8px;z-index:2;}
+.mc-ko .mc-head{padding-top:1.4rem;}
+/* Bracket polish */
+.br-match{transition:transform .15s,box-shadow .15s;}
+.br-match:hover{transform:translateY(-2px);box-shadow:0 8px 22px rgba(0,0,0,0.45),0 0 20px rgba(244,203,85,0.08);}
+
 .time-sel{background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.14);border-radius:8px;color:var(--text);font-family:'Orbitron',sans-serif;font-size:.95rem;font-weight:700;padding:.4rem .35rem;outline:none;transition:all .15s;color-scheme:dark;cursor:pointer;text-align:center;}
 .time-sel:focus{border-color:var(--gold3);box-shadow:0 0 0 3px rgba(244,203,85,0.1);}
 .time-colon{font-family:'Orbitron',sans-serif;font-weight:800;color:var(--gold2);font-size:1rem;}
